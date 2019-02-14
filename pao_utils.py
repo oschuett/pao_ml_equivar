@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 import numpy as np
 
 #===============================================================================
@@ -13,7 +11,7 @@ def append_samples(samples, kinds, atom2kind, coords, xblocks):
 
 #===============================================================================
 def parse_pao_file(fn):
-    # abusing dics as 1-based array
+    # abusing dicts as 1-based array
     kinds = {}
     atom2kind = []
     coords = []
