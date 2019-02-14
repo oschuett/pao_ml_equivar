@@ -1,23 +1,6 @@
 #!/usr/bin/python3
 
-from glob import glob
-from pprint import pprint
 import numpy as np
-
-#===============================================================================
-def main():
-    samples = {}
-    for fn in glob("2H2O_MD/frame_*/2H2O_pao44-1_0.pao"):
-        print(fn)
-        data = parse_pao_file(fn)
-        append_samples(samples, *data)
-    #pprint(samples)
-    #pprint(kinds)
-    #pprint(atom2kind)
-    #pprint(coords)
-    #pprint(atoms)
-    #pprint(xblocks)
-    #return
 
 #===============================================================================
 def append_samples(samples, kinds, atom2kind, coords, xblocks):
@@ -76,4 +59,4 @@ def parse_pao_file(fn):
 
     return kinds, atom2kind, coords, xblocks
 
-main()
+#EOF
