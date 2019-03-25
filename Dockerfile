@@ -39,7 +39,8 @@ RUN pip3 install /opt/lie_learn
 RUN git clone -b missing_point https://github.com/blondegeek/se3cnn.git /opt/se3cnn
 RUN pip3 install /opt/se3cnn
 
-COPY . /workspace/
+#COPY . /workspace/ # using volume mount instead
+
 WORKDIR /workspace/
 
 # Launch Notebook server
