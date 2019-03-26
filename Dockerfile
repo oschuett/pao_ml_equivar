@@ -28,7 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip3 install notebook
 
 # Install more Python packages
-RUN pip3 install numpy pandas torch scipy livelossplot Cython requests
+RUN pip3 install numpy pandas torch scipy livelossplot Cython requests ase
 
 # Install lie_learn
 # see also https://github.com/jonas-koehler/s2cnn
