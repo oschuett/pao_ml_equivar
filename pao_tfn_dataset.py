@@ -2,7 +2,7 @@
 
 import torch
 import numpy as np
-from pao_utils import parse_pao_file
+from pao_file_utils import parse_pao_file
 
 # Find and parse all .pao files.
 # Each file corresponds to a molecular configuration, ie. a frame.
