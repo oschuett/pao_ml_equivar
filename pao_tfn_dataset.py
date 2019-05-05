@@ -2,28 +2,29 @@
 
 import torch
 import numpy as np
-from glob import glob
 from pao_utils import parse_pao_file
 
 # Find and parse all .pao files.
 # Each file corresponds to a molecular configuration, ie. a frame.
 # Since the system contains multiple atoms, each .pao file contains multiple samples.
 class PAODataset(object):
-    def __init__(self, kind_name):
+    def __init__(self, filenames, kind_name):
+        self.filenames = filenames
         self.kind_name = kind_name
         self.sample_iatoms = []
         self.sample_coords = []
         self.sample_xblocks = []
         self.sample_compl_projector = []
+        self.kind_names = set()
 
         #TODO split in training and test set
-        for fn in glob("2H2O_MD/frame_*/2H2O_pao44-1_0.pao"):
+        for fn in self.filenames:
             kinds, atom2kind, coords, xblocks = parse_pao_file(fn)
+            self.kind_names.update(kinds.keys())
             for iatom, kind in enumerate(atom2kind):
                 if kind != self.kind_name:
                     continue
-                rel_coords = coords - coords[iatom,:] # relative coordinates
-                self.sample_coords.append(rel_coords)
+                self.sample_coords.append(coords)
                 xblock_i = torch.from_numpy(xblocks[iatom])
                 self.sample_xblocks.append(xblock_i)
                 self.sample_iatoms.append(iatom)
@@ -44,17 +45,21 @@ class PAODataset(object):
                 #self.sample_compl_projector.append(compl_projector)
 
         # assuming kinds and atom2kind are the same across whole training data
-        kinds_enum = list(kinds.keys())
-        self.kinds_onehot = np.zeros((len(kinds), len(atom2kind)))
+        self.kinds_onehot = self.encode_kind(atom2kind)
+
+    def encode_kind(self, atom2kind):
+        kinds_enum = list(sorted(self.kind_names))
+        kinds_onehot = np.zeros((len(kinds_enum), len(atom2kind)))
         for iatom, kind in enumerate(atom2kind):
             idx = kinds_enum.index(kind)
-            self.kinds_onehot[idx, iatom] = 1.0
+            kinds_onehot[idx, iatom] = 1.0
+        return kinds_onehot
 
     def __getitem__(self, idx):
         # roll central atom to the front
         iatom = self.sample_iatoms[idx]
         rolled_kinds = np.roll(self.kinds_onehot, shift=-iatom, axis=1)
-        rolled_coords =  np.roll(self.sample_coords[idx], shift=-iatom, axis=0)  
+        rolled_coords =  np.roll(self.sample_coords[idx], shift=-iatom, axis=0)
         return rolled_kinds, rolled_coords, idx
 
     def __len__(self):

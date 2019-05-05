@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import numpy as np
 
 #===============================================================================
@@ -56,5 +58,40 @@ def parse_pao_file(fn):
         xblocks[iatom] = xblocks[iatom].reshape(m, n)
 
     return kinds, atom2kind, coords, xblocks
+
+#===============================================================================
+def write_pao_file(coords, xblocks, filename):
+    natoms = coords.shape[0]
+    assert coords.shape[1] == 3
+    len(xblocks) == natoms
+
+    output = []
+    output.append("Version 4")
+    output.append("Parametrization DIRECT")
+    output.append("Nkinds 2")
+    output.append("Kind              1 O   8")
+    output.append("NParams              1  52")
+    output.append("PrimBasis              1         13 DZVP-MOLOPT-GTH")
+    output.append("PaoBasis              1   4")
+    output.append("NPaoPotentials              1   0")
+    output.append("Kind              2 H   1")
+    output.append("NParams              2  20")
+    output.append("PrimBasis              2          5 DZVP-MOLOPT-GTH")
+    output.append("PaoBasis              2   4")
+    output.append("NPaoPotentials              2   0")
+    output.append("Cell 8.0 0.0 0.0   0.0 8.0 0.0   0.0 0.0 8.0")
+    output.append("Natoms {}".format(natoms))
+
+    kinds = "OHHOHH" # TODO
+    for iatom in range(natoms):
+        output.append("Atom {} {} {} {} {}".format(iatom+1, kinds[iatom], coords[iatom, 0], coords[iatom, 1], coords[iatom, 2]))
+    for iatom in range(natoms):
+        x = xblocks[iatom].flatten()
+        y = " ".join(["%f"%i for i in x])
+        output.append("Xblock {} {}".format(iatom+1, y))
+    output.append("THE_END")
+
+    with open(filename, "w") as f:
+        f.write("\n".join(output))
 
 #EOF

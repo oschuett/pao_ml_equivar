@@ -10,7 +10,6 @@ from se3cnn.point_kernel import gaussian_radial_function
 
 #from se3cnn.SO3 import torch_default_dtype
 #from se3cnn.utils import torch_default_dtype
-#import se3cnn.point_utils as point_utils
 #from se3cnn.non_linearities import NormSoftplus
 
 class PAONet(torch.nn.Module):
