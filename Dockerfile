@@ -93,7 +93,7 @@ WORKDIR /opt/cp2k/arch
 RUN ln -vs ../tools/toolchain/install/arch/* .
 
 WORKDIR /opt/cp2k/
-RUN bash -c "source ./tools/toolchain/install/setup && make -j"
+RUN bash -c "source ./tools/toolchain/install/setup && make -j VERSION=ssmp"
 
 #COPY . /workspace/ # using volume mount instead
 

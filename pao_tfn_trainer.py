@@ -7,6 +7,23 @@ import torch.nn.functional
 import torch.utils.data
 from se3cnn.point_utils import difference_matrix
 
+def loss_function(xblock_net, xblock_sample):
+    #TODO: wrap this into a torch LossFunction
+    # We penalize non-unit vectors later, but we are not going to rely on it here.
+    xblock_net_unit = torch.nn.functional.normalize(xblock_net)
+    #TODO: This might not be ideal as it implicitly foces the pao basis vectors to be orthogonal.
+    projector = torch.matmul(torch.t(xblock_net_unit), xblock_net_unit)
+    residual = torch.t(xblock_sample) - torch.matmul(projector, torch.t(xblock_sample))
+    return torch.mean(torch.pow(residual, 2))
+
+def ortho(xblock):
+    #https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process#Alternatives\n",
+    V = torch.t(xblock)
+    VV  = torch.matmul(torch.t(V), V)
+    L = torch.cholesky(VV)
+    L_inv = torch.inverse(L)
+    return torch.matmul(L_inv, torch.t(V))
+
 def train_pao_tfn(pao_files, prim_basis_shells, pao_basis_size, kind_name, max_epochs):
     train_dataset = PAODataset(pao_files, kind_name)
     print("Training NN for kind {} using {} samples.".format(kind_name, len(train_dataset)))
@@ -37,19 +54,11 @@ def train_pao_tfn(pao_files, prim_basis_shells, pao_basis_size, kind_name, max_e
             for i, idx in enumerate(sample_indices):  # loop over batch
                 # We only care about the xblock of the central atom, which we rolled to the front.
                 xblock_net = net.decode_xblock(output_net[i,:,0])
-
-                #TODO: wrap this into a torch LossFunction
-                # We penalize non-unit vectors later, but we are not going to rely on it here.
-                xblock_net_unit = torch.nn.functional.normalize(xblock_net)
-                #TODO: This might not be ideal as it implicitly foces the pao basis vectors to be orthogonal.
-                projector = torch.matmul(torch.t(xblock_net_unit), xblock_net_unit)
-
                 xblock_sample = train_dataset.sample_xblocks[idx]
-                residual = torch.t(xblock_sample) - torch.matmul(projector, torch.t(xblock_sample))
-                missmatch += torch.norm(residual)
+                missmatch += loss_function(xblock_net, xblock_sample)
 
                 # penalize non-unit basis vector
-                penalty = torch.norm(1 - torch.norm(xblock_net, dim=1))
+                penalty += torch.norm(1 - torch.norm(xblock_net, dim=1))
 
             loss = missmatch + penalty
             epoch_loss += loss.item()
