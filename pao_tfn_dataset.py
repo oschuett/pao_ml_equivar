@@ -4,6 +4,16 @@ import torch
 import numpy as np
 from pao_file_utils import parse_pao_file
 
+# alphabet used for one-hot encoding
+KIND_ALPHABET = ("H", "O",)
+
+def encode_kind(atom2kind):
+    kinds_onehot = np.zeros((len(KIND_ALPHABET), len(atom2kind)))
+    for iatom, kind in enumerate(atom2kind):
+        idx = KIND_ALPHABET.index(kind)
+        kinds_onehot[idx, iatom] = 1.0
+    return kinds_onehot
+
 # Find and parse all .pao files.
 # Each file corresponds to a molecular configuration, ie. a frame.
 # Since the system contains multiple atoms, each .pao file contains multiple samples.
@@ -15,45 +25,24 @@ class PAODataset(object):
         self.sample_coords = []
         self.sample_xblocks = []
         self.sample_compl_projector = []
-        self.kind_names = set()
 
-        #TODO split in training and test set
+        atom2kind_ref = None
         for fn in self.filenames:
             kinds, atom2kind, coords, xblocks = parse_pao_file(fn)
-            self.kind_names.update(kinds.keys())
+
+            # check that atom2kind is consistent across dataset
+            if atom2kind_ref is None:
+                atom2kind_ref = atom2kind
+                self.kinds_onehot = encode_kind(atom2kind)
+            assert atom2kind_ref == atom2kind
+
             for iatom, kind in enumerate(atom2kind):
                 if kind != self.kind_name:
                     continue
                 self.sample_coords.append(coords)
-                xblock_i = torch.from_numpy(xblocks[iatom])
-                self.sample_xblocks.append(xblock_i)
+                self.sample_xblocks.append(torch.from_numpy(xblocks[iatom]))
                 self.sample_iatoms.append(iatom)
 
-                ## orthonormalize xblock_sample's basis vectors (they deviate slightly)
-                ##TODO: add a regularization term for this.
-                ##
-                ##https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process#Alternatives
-                #V = torch.t(xblock_i)  #TODO: use torch.tensor() instead?
-                #VV  = torch.matmul(torch.t(V), V)
-                ##print(torch.det(VV))
-                #L = torch.cholesky(VV)
-                #L_inv = torch.inverse(L)
-                #U = torch.matmul(V, torch.t(L_inv))
-                #projector = torch.matmul(U, torch.t(U))
-                #identity = torch.eye(projector.shape[0])
-                #compl_projector = identity - projector
-                #self.sample_compl_projector.append(compl_projector)
-
-        # assuming kinds and atom2kind are the same across whole training data
-        self.kinds_onehot = self.encode_kind(atom2kind)
-
-    def encode_kind(self, atom2kind):
-        kinds_enum = list(sorted(self.kind_names))
-        kinds_onehot = np.zeros((len(kinds_enum), len(atom2kind)))
-        for iatom, kind in enumerate(atom2kind):
-            idx = kinds_enum.index(kind)
-            kinds_onehot[idx, iatom] = 1.0
-        return kinds_onehot
 
     def __getitem__(self, idx):
         # roll central atom to the front

@@ -45,8 +45,8 @@ class PAONet(torch.nn.Module):
         self.layers.append(SE3PointConvolution(Rs_repr(hidden_features), Rs_repr(output_features), **radii_args))
 
 
-    def forward(self, input, difference_mat, relative_mask=None):
-        output = input
+    def forward(self, kinds_onehot, difference_mat, relative_mask=None):
+        output = kinds_onehot
         for layer in self.layers:
             output = layer(output, difference_mat, relative_mask)
         #return self.decode_xblock(output)
