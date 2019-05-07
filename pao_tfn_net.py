@@ -44,6 +44,9 @@ class PAONet(torch.nn.Module):
         Rs_repr = lambda features: [(m, l) for l, m in enumerate(features)]
         self.layers.append(SE3PointConvolution(Rs_repr(hidden_features), Rs_repr(output_features), **radii_args))
 
+        # xblock decoder
+        self.xblock_decoder = self.build_xblock_decoder()
+
 
     def forward(self, kinds_onehot, difference_mat, relative_mask=None):
         output = kinds_onehot
@@ -66,6 +69,47 @@ class PAONet(torch.nn.Module):
             xblock.append(xvec[i:i+n].reshape(self.pao_basis_size, m * (2 * l + 1)))
             i += n
         return torch.cat(xblock, dim=1)
+
+    def build_xblock_decoder(self):
+        """Builds a lookup table to decodes a 1-D array into a [num_pao, num_prim] 2-D block."""
+        decoder = [[] for _ in range(self.pao_basis_size)]
+        x = 0
+        for l, m in enumerate(self.prim_basis_shells):
+            for i in range(self.pao_basis_size):
+                for j in range(m * (2 * l + 1)):
+                    decoder[i].append(x)
+                    x += 1
+
+                #for j in range(m):
+                #    # CP2K and se3cnn enumerate the spherical harmonics differently.
+                #    # TODO: find more general mapping
+                #    #https://en.wikipedia.org/wiki/Table_of_spherical_harmonics#Real_spherical_harmonics
+                #    #https://manual.cp2k.org/trunk/CP2K_INPUT/GLOBAL/PRINT.html#SPHERICAL_HARMONICS
+                #    if l==0:
+                #        lookup[i].append(x) 
+                #    elif l==1:
+                #        lookup[i].append(x + 1)  # py
+                #        lookup[i].append(x + 2)  # pz
+                #        lookup[i].append(x + 0)  # px
+                #    elif l==2:
+                #        #lookup[i].append(?) # dx2
+                #        lookup[i].append(0) # TODO: dummy
+                #
+                #        lookup[i].append(x) # dxy
+                #        lookup[i].append(x + 3) # dxz
+                #
+                #        #lookup[i].append(?) # dy2
+                #        lookup[i].append(0) # TODO: dummy
+                #
+                #        lookup[i].append(x + 1) # dyz
+                #        lookup[i].append(x + 2) # dz2
+                #        # left over:  and  dx2 - z2
+                #    else:
+                #        raise NotImplementedError()
+                #    lookup[i].append(x)
+                #    x += (2 * l + 1)
+
+        return torch.as_tensor(decoder)
 
 
 #EOF

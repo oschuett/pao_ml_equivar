@@ -43,9 +43,8 @@ class PAODataset(object):
                 self.sample_xblocks.append(torch.as_tensor(xblocks[iatom]))
                 self.sample_iatoms.append(iatom)
 
-
     def __getitem__(self, idx):
-        return self.sample_iatoms[idx], self.kinds_onehot, self.sample_coords[idx], idx
+        return self.sample_iatoms[idx], self.kinds_onehot, self.sample_coords[idx], self.sample_xblocks[idx]
 
     def __len__(self):
         return len(self.sample_xblocks)
