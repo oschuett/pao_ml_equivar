@@ -40,16 +40,12 @@ class PAODataset(object):
                 if kind != self.kind_name:
                     continue
                 self.sample_coords.append(coords)
-                self.sample_xblocks.append(torch.from_numpy(xblocks[iatom]))
+                self.sample_xblocks.append(torch.as_tensor(xblocks[iatom]))
                 self.sample_iatoms.append(iatom)
 
 
     def __getitem__(self, idx):
-        # roll central atom to the front
-        iatom = self.sample_iatoms[idx]
-        rolled_kinds = np.roll(self.kinds_onehot, shift=-iatom, axis=1)
-        rolled_coords =  np.roll(self.sample_coords[idx], shift=-iatom, axis=0)
-        return rolled_kinds, rolled_coords, idx
+        return self.sample_iatoms[idx], self.kinds_onehot, self.sample_coords[idx], idx
 
     def __len__(self):
         return len(self.sample_xblocks)

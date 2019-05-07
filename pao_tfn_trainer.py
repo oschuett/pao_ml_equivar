@@ -12,7 +12,10 @@ def loss_function(xblock_net, xblock_sample):
     # We penalize non-unit vectors later, but we are not going to rely on it here.
     #xblock_net_unit = torch.nn.functional.normalize(xblock_net)
     #projector = torch.matmul(torch.t(xblock_net_unit), xblock_net_unit)
+    #TODO: maybe penalize non-unit basis vector
+    #penalty += torch.norm(1 - torch.norm(xblock_net, dim=1))
     #TODO: This might not be ideal as it implicitly foces the pao basis vectors to be orthogonal-normal.
+    #
     projector = torch.matmul(torch.t(xblock_net), xblock_net)
     residual = torch.t(xblock_sample) - torch.matmul(projector, torch.t(xblock_sample))
     return torch.mean(torch.pow(residual, 2))
@@ -40,7 +43,7 @@ def train_pao_tfn(pao_files, prim_basis_shells, pao_basis_size, kind_name, num_h
     for epoch in range(max_epochs):
         epoch_loss = 0
         for batch in train_dataloader:
-            kinds_onehot, coords, sample_indices = batch
+            central_atom, kinds_onehot, coords, sample_indices = batch
             diff_M = difference_matrix(coords)
 
             # forward pass
@@ -50,13 +53,10 @@ def train_pao_tfn(pao_files, prim_basis_shells, pao_basis_size, kind_name, num_h
 
             #TODO: batchify this to speed things up
             for i, idx in enumerate(sample_indices):  # loop over batch
-                # We only care about the xblock of the central atom, which we rolled to the front.
-                xblock_net = net.decode_xblock(output_net[i,:,0])
+                # We only care about the xblock of the central atom
+                xblock_net = net.decode_xblock(output_net[i,:,central_atom[i]])
                 xblock_sample = train_dataset.sample_xblocks[idx]
                 loss += loss_function(xblock_net, xblock_sample)
-
-                #TODO: maybe penalize non-unit basis vector
-                #penalty += torch.norm(1 - torch.norm(xblock_net, dim=1))
 
             batch_size = len(sample_indices)
             loss /= batch_size
