@@ -82,6 +82,10 @@ def write_pao_file(filename, kinds, atom2kind, coords, xblocks):
     for iatom in range(natoms):
         output.append("Atom {} {} {} {} {}".format(iatom+1, atom2kind[iatom], coords[iatom, 0], coords[iatom, 1], coords[iatom, 2]))
     for iatom in range(natoms):
+        kind = kinds[atom2kind[iatom]]
+        assert len(xblocks[iatom].shape) == 2
+        assert xblocks[iatom].shape[0] == kind['pao_basis_size']
+        assert xblocks[iatom].shape[1] == kind['prim_basis_size']
         x = xblocks[iatom].flatten()
         y = " ".join(["%f"%i for i in x])
         output.append("Xblock {} {}".format(iatom+1, y))
