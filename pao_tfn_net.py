@@ -4,9 +4,11 @@ import torch
 import numpy as np
 from functools import partial
 
-from se3cnn.convolution import SE3PointConvolution
-from se3cnn.blocks.point_norm_block import PointNormBlock
-from se3cnn.point_kernel import gaussian_radial_function
+#from se3cnn.convolution import SE3PointConvolution
+#from se3cnn.blocks.point_norm_block import PointNormBlock
+#from se3cnn.point_kernel import gaussian_radial_function
+
+from ole_se3cnn import SE3PointConvolution, PointNormBlock, gaussian_radial_function
 
 class PAONet(torch.nn.Module):
     def __init__(self, num_kinds, pao_basis_size, prim_basis_shells, num_hidden=1, num_radial=4, max_radius=2.5):
