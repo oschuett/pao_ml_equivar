@@ -30,20 +30,29 @@ RUN pip3 install notebook
 # Install more Python packages
 RUN pip3 install numpy pandas torch scipy livelossplot Cython requests ase
 
-# Install lie_learn
-# see also https://github.com/jonas-koehler/s2cnn
-RUN git clone https://github.com/AMLab-Amsterdam/lie_learn /opt/lie_learn
+# Install Tensorflow
+#RUN pip3 install tensorflow
 
-#Fix for Numpy v1.16.3 changes
-COPY ./fix_lie_learn_allow_pickle.patch /tmp/
-RUN cd /opt/lie_learn; cat /tmp/fix_lie_learn_allow_pickle.patch | patch -p1
+# Tensorflow 2
+#https://www.tensorflow.org/alpha/guide/effective_tf2
+#https://www.tensorflow.org/alpha/guide/migration_guide
+RUN pip3 install tensorflow==2.0.0-alpha0
+RUN pip3 install sympy
 
-RUN pip3 install /opt/lie_learn
-
+## Install lie_learn
+## see also https://github.com/jonas-koehler/s2cnn
+#RUN git clone https://github.com/AMLab-Amsterdam/lie_learn /opt/lie_learn
+#
+##Fix for Numpy v1.16.3 changes
+#COPY ./fix_lie_learn_allow_pickle.patch /tmp/
+#RUN cd /opt/lie_learn; cat /tmp/fix_lie_learn_allow_pickle.patch | patch -p1
+#
+#RUN pip3 install /opt/lie_learn
+#
 ## Install SE3CNN
 #RUN git clone -b missing_point https://github.com/blondegeek/se3cnn.git /opt/se3cnn
 #RUN pip3 install /opt/se3cnn
-
+#
 ## Install CP2K
 #RUN git clone -b pao_ab https://github.com/oschuett/cp2k.git /opt/cp2k
 #

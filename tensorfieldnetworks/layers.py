@@ -8,6 +8,8 @@ from .utils import FLOAT_TYPE, EPSILON
 
 #===================================================================================================
 def R(inputs, nonlin=tf.nn.relu, hidden_dim=None, output_dim=1, weights_initializer=None, biases_initializer=None):
+    """ Computes: radial = b2 + w2 * nonlin(b1 + w1 * input) """
+
     with tf.variable_scope("radial_function"):
         if weights_initializer is None:
             weights_initializer = tf.contrib.layers.xavier_initializer()
@@ -39,6 +41,7 @@ def unit_vectors(v, axis=-1):
 
 #===================================================================================================
 def Y_2(rij):
+    """ Spherical harmonics for l=2, expects as input the difference matrix between points """
     # rij : [N, N, 3]
     # x, y, z : [N, N]
     x = rij[:, :, 0]
@@ -170,6 +173,7 @@ def filter_1_output_1(layer_input,
             return tf.einsum('ijk,abfj,bfk->afi', cg, F_1_out, layer_input)
         elif layer_input.get_shape().as_list()[-1] == 3:
             # 1 x 1 -> 1
+            #TODO: Levi-Civita tensor is very sparse.
             return tf.einsum('ijk,abfj,bfk->afi', utils.get_eijk(), F_1_out, layer_input)
         else:
             raise NotImplementedError("Other Ls not implemented")
