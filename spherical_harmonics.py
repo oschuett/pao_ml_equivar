@@ -37,7 +37,7 @@ def Y_l(r_vec, l):
         pf = np.sqrt(15.0 / (16.0 * np.pi))
         result[4] = pf * (x**2 - y**2)
     else:
-        raise Expception("Not implemented")
+        raise Exception("Not implemented")
 
     return result
 
@@ -134,6 +134,36 @@ def get_clebsch_gordan_coefficients_sympy(li, lj, lo):
         cg_cache[key] = coeffs
     return cg_cache[key]
 
+##===============================================================================
+#cg_cache2 = dict()
+#
+## Formular 1.18 from https://sahussaintu.files.wordpress.com/2014/03/spherical_harmonics.pdf
+#
+#def get_clebsch_gordan_coefficients_new(li, lj, lo):
+#    from sympy.physics.quantum.cg import Wigner3j, CG
+#    #TODO maybe rename lo -> lk ?
+#    global cg_cache2
+#    key = (li, lj, lo)
+#    if key not in cg_cache2:
+#        assert abs(li-lj) <= lo <= abs(li+lj)
+#
+#        #cg0 = CG(li, 0, lj, 0, lo, 0).doit() 
+#        #numerator = (2*li+1) * (2*lj+1)
+#        #denominator = 4 * np.pi * (2*lo+1)
+#        #pre_factor = cg0 * np.sqrt(numerator / denominator)
+#
+#        coeffs = np.zeros(shape=(2*li+1, 2*lj+1, 2*lo+1))
+#        for mi in range(-li, li+1):
+#            for mj in range(-lj, lj+1):
+#                for mo in range(-lo, lo+1):
+#                    # https://docs.sympy.org/latest/modules/physics/quantum/cg.html
+#                    #cg = Wigner3j(li, mi, lj, mj, lo, mo).doit()
+#                    cg = CG(lo, mo, li, mi, lj, mj).doit()
+#                    coeffs[mi+li, mj+lj, mo+lo] = cg
+#        cg_cache2[key] = coeffs
+#    return cg_cache2[key]
+#
+
 #===============================================================================
 # This is most likely wrong because with p functions use yzx instead of xyz.
 def get_clebsch_gordan_coefficients_table(li, lj, lo):
@@ -167,3 +197,6 @@ def get_clebsch_gordan_coefficients_table(li, lj, lo):
         coeffs[0,2,1] = -1.0
         coeffs[1,0,2] = -1.0
     return coeffs
+
+
+# https://sahussaintu.files.wordpress.com/2014/03/spherical_harmonics.pdf

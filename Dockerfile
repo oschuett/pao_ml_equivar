@@ -39,16 +39,16 @@ RUN pip3 install numpy pandas torch scipy livelossplot Cython requests ase
 RUN pip3 install tensorflow==2.0.0-alpha0
 RUN pip3 install sympy
 
-## Install lie_learn
-## see also https://github.com/jonas-koehler/s2cnn
-#RUN git clone https://github.com/AMLab-Amsterdam/lie_learn /opt/lie_learn
-#
-##Fix for Numpy v1.16.3 changes
+# Install lie_learn
+# see also https://github.com/jonas-koehler/s2cnn
+RUN git clone https://github.com/AMLab-Amsterdam/lie_learn /opt/lie_learn
+
+#Fix for Numpy v1.16.3 changes
 #COPY ./fix_lie_learn_allow_pickle.patch /tmp/
 #RUN cd /opt/lie_learn; cat /tmp/fix_lie_learn_allow_pickle.patch | patch -p1
-#
-#RUN pip3 install /opt/lie_learn
-#
+
+RUN pip3 install /opt/lie_learn
+
 ## Install SE3CNN
 #RUN git clone -b missing_point https://github.com/blondegeek/se3cnn.git /opt/se3cnn
 #RUN pip3 install /opt/se3cnn
