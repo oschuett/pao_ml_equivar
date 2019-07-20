@@ -92,26 +92,67 @@ IMPLICIT NONE
    REAL(KIND=dp), PARAMETER :: pi = 3.14159265358979323846264338_dp ! Pi
 
 
-   REAL(KIND=dp)                                      :: rga(5, 2)
-   INTEGER                                            :: l1, m1, l2, m2
-   !https://github.com/cp2k/cp2k/blob/master/src/common/cg_test.F
-WRITE (*,*) "Hello"
 CALL clebsch_gordon_init(5)
-l1 = 1
-m1 = 1
-l2 = 1
-m2 = 1
-
-
-CALL clebsch_gordon_real(l1, m1, l2, m2, rga)
-
-WRITE(*,*) "rga(:,1) = ", rga(:,1)
-WRITE(*,*) "rga(:,2) = ", rga(:,2)
-
+CALL print_clebsch_gordon(l1=1, l2=1, l3=2)
 CALL clebsch_gordon_deallocate()
 
 CONTAINS
 
+! **************************************************************************************************
+! **************************************************************************************************
+   SUBROUTINE print_clebsch_gordon(l1, l2, l3)
+      INTEGER, INTENT(IN)                                :: l1, l2, l3
+      REAL(KIND=dp)                                      :: rga(10, 2), cga(10)
+      INTEGER                                            :: m1, m2, m3, l3_idx
+
+      !https://github.com/cp2k/cp2k/blob/master/src/common/cg_test.F
+
+      l3_idx = l3/2+1
+
+      DO m1 = -l1, l1
+      DO m2 = -l2, l2
+         !CALL clebsch_gordon_real(l1, m1, l2, m2, rga)
+         CALL clebsch_gordon_complex(l1, m1, l2, m2, cga)
+         DO m3 = -l3, l3
+           !WRITE (*,*) "m1", m1, "m2", m2, "m3", m3, "rga", rga(l3_idx,:)
+           WRITE (*,*) "m1", m1, "m2", m2, "m3", m3, "cga", cga(l3_idx)
+         END DO
+      END DO
+      END DO
+   END SUBROUTINE print_clebsch_gordon
+
+   ! **************************************************************************************************
+!> \brief ...
+!> \param l1 ...
+!> \param m1 ...
+!> \param l2 ...
+!> \param m2 ...
+!> \param clm ...
+! **************************************************************************************************
+   SUBROUTINE clebsch_gordon_complex(l1, m1, l2, m2, clm)
+      INTEGER, INTENT(IN)                                :: l1, m1, l2, m2
+      REAL(KIND=dp), DIMENSION(:), INTENT(OUT)           :: clm
+
+      INTEGER                                            :: icase, ind, l, lm, lp, n
+
+      l = l1+l2
+      IF (l > lmax) CALL clebsch_gordon_init(l)
+      n = l/2+1
+      IF (n > SIZE(clm)) STOP "Array too small"
+
+      IF ((m1 >= 0 .AND. m2 >= 0) .OR. (m1 < 0 .AND. m2 < 0)) THEN
+         icase = 1
+      ELSE
+         icase = 2
+      END IF
+      ind = order(l1, m1, l2, m2)
+
+      DO lp = MOD(l, 2), l, 2
+         lm = lp/2+1
+         clm(lm) = cg_table(ind, lm, icase)
+      END DO
+
+   END SUBROUTINE clebsch_gordon_complex
 
 ! **************************************************************************************************
 !> \brief ...

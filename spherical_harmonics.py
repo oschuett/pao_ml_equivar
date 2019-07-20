@@ -1,41 +1,46 @@
 import numpy as np
 
 #===============================================================================
+# Tesseral Harmonics
 #https://github.com/cp2k/cp2k/blob/master/src/common/spherical_harmonics.F
+# http://www2.cpfs.mpg.de/~rotter/homepage_mcphase/manual/node131.html
 def Y_l(r_vec, l):
     """Real Spherical Harmonics"""
 
-    r = np.sqrt(np.dot(r_vec,r_vec))
+    in_shape = r_vec.shape
+    assert in_shape[-1] == 3
+    out_shape = in_shape[:-1] + (2*l+1,)
+    result = np.zeros(out_shape)
+
+    r = np.sqrt(np.sum(r_vec * r_vec, axis=-1))
     x = r_vec[..., 0] / r
     y = r_vec[..., 1] / r
     z = r_vec[..., 2] / r
 
     if l == 0:
-        return np.sqrt(1.0 / (4.0 * np.pi))
+        result[..., 0] = np.sqrt(1.0 / (4.0 * np.pi))
     elif l == 1:
         pf = np.sqrt(3.0 / (4.0 * np.pi))
-        result = np.zeros(3)
-        result[0] = pf * y # m=-1
-        result[1] = pf * z # m=0
-        result[2] = pf * x # m=+1
+        result[..., 0] = pf * y # m=-1
+        result[..., 1] = pf * z # m=0
+        result[..., 2] = pf * x # m=+1
         return result
     elif l == 2:
-        result = np.zeros(5)
         # m = -2
         pf = np.sqrt(15.0 / (16.0 * np.pi))
-        result[0] = pf * 2.0 * x * y
+        result[..., 0] = pf * 2.0 * x * y
         # m = -1
         pf = np.sqrt(15.0 / (4.0 * np.pi))
-        result[1] = pf * z * y
+        result[..., 1] = pf * z * y
         # m = 0
         pf = np.sqrt(5.0 / (16.0 * np.pi))
-        result[2] = pf * (3.0 * z**2 - 1.0)
+        result[..., 2] = pf * (3.0 * z**2 - 1.0)
         # m = 1
         pf = np.sqrt(15.0 / (4.0 * np.pi))
-        result[3] = pf * z * x
+        result[..., 3] = pf * z * x
         # m = 2
         pf = np.sqrt(15.0 / (16.0 * np.pi))
-        result[4] = pf * (x**2 - y**2)
+        result[..., 4] = pf * (x**2 - y**2)
     else:
         raise Exception("Not implemented")
 
@@ -134,6 +139,26 @@ def get_clebsch_gordan_coefficients_sympy(li, lj, lo):
         cg_cache[key] = coeffs
     return cg_cache[key]
 
+#===============================================================================
+cg_cache2 = dict()
+
+def get_clebsch_gordan_coefficients_sympy(li, lj, lo):
+    from sympy.physics.quantum.cg import CG
+    #TODO maybe rename lo -> lk ?
+    global cg_cache2
+    key = (li, lj, lo)
+    if key not in cg_cache2:
+        assert abs(li-lj) <= lo <= abs(li+lj)
+        coeffs = np.zeros(shape=(2*li+1, 2*lj+1, 2*lo+1))
+        for mi in range(-li, li+1):
+            for mj in range(-lj, lj+1):
+                for mo in range(-lo, lo+1):
+                    # https://docs.sympy.org/latest/modules/physics/quantum/cg.html
+                    cg = CG(li, mi, lj, mj, lo, mo).doit()
+                    coeffs[mi+li, mj+lj, mo+lo] = cg
+        cg_cache2[key] = coeffs
+    return cg_cache2[key]
+    
 ##===============================================================================
 #cg_cache2 = dict()
 #
