@@ -46,182 +46,240 @@ def Y_l(r_vec, l):
 
     return result
 
-#===============================================================================
-#WARNING: Uses a different definition than above, which leads to other signs.
-def Y_l_sympy(r_vec, l):
-    from sympy.functions.special import spherical_harmonics
-    import sympy
-
-    x = r_vec[0]
-    y = r_vec[1]
-    z = r_vec[2]
-    r = sympy.sqrt(x**2+y**2+z**2)
-    theta = sympy.acos(z/r)
-    phi = sympy.atan2(y, x)
-    result = np.zeros(2*l+1)
-    for m in range(-l, l+1):
-        result[m+l] = sympy.re(spherical_harmonics.Znm(l, m, theta, phi)).evalf()
-        condon_shortley_phase = (-1.0)**m
-        result[m+l] *= condon_shortley_phase
-    return result
 
 #===============================================================================
-#http://qutip.org/docs/3.1.0/modules/qutip/utilities.html
-def clebsch(j1, j2, j3, m1, m2, m3):
-    """Calculates the Clebsch-Gordon coefficient
-    for coupling (j1,m1) and (j2,m2) to give (j3,m3).
-
-    Parameters
-    ----------
-    j1 : float
-        Total angular momentum 1.
-
-    j2 : float
-        Total angular momentum 2.
-
-    j3 : float
-        Total angular momentum 3.
-
-    m1 : float
-        z-component of angular momentum 1.
-
-    m2 : float
-        z-component of angular momentum 2.
-
-    m3 : float
-        z-component of angular momentum 3.
-
-    Returns
-    -------
-    cg_coeff : float
-        Requested Clebsch-Gordan coefficient.
-
-    """
-    from scipy.special import factorial
-
-    if m3 != m1 + m2:
-        return 0
-    vmin = int(np.max([-j1 + j2 + m3, -j1 + m1, 0]))
-    vmax = int(np.min([j2 + j3 + m1, j3 - j1 + j2, j3 + m3]))
-
-    C = np.sqrt((2.0 * j3 + 1.0) * factorial(j3 + j1 - j2) *
-                factorial(j3 - j1 + j2) * factorial(j1 + j2 - j3) *
-                factorial(j3 + m3) * factorial(j3 - m3) /
-                (factorial(j1 + j2 + j3 + 1) *
-                factorial(j1 - m1) * factorial(j1 + m1) *
-                factorial(j2 - m2) * factorial(j2 + m2)))
-    S = 0
-    for v in range(vmin, vmax + 1):
-        S += (-1.0) ** (v + j2 + m2) / factorial(v) * \
-            factorial(j2 + j3 + m1 - v) * factorial(j1 - m1 + v) / \
-            factorial(j3 - j1 + j2 - v) / factorial(j3 + m3 - v) / \
-            factorial(v + j1 - j2 - m3)
-    C = C * S
-    return C
-
-#===============================================================================
-cg_cache = dict()
-
-def get_clebsch_gordan_coefficients_sympy(li, lj, lo):
-    from sympy.physics.quantum.cg import CG
-    #TODO maybe rename lo -> lk ?
-    global cg_cache
-    key = (li, lj, lo)
-    if key not in cg_cache:
-        assert abs(li-lj) <= lo <= abs(li+lj)
-        coeffs = np.zeros(shape=(2*li+1, 2*lj+1, 2*lo+1))
-        for mi in range(-li, li+1):
-            for mj in range(-lj, lj+1):
-                for mo in range(-lo, lo+1):
-                    # https://docs.sympy.org/latest/modules/physics/quantum/cg.html
-                    cg = CG(li, mi, lj, mj, lo, mo).doit()
-                    coeffs[mi+li, mj+lj, mo+lo] = cg
-        cg_cache[key] = coeffs
-    return cg_cache[key]
-
-#===============================================================================
-cg_cache2 = dict()
-
-def get_clebsch_gordan_coefficients_sympy(li, lj, lo):
-    from sympy.physics.quantum.cg import CG
-    #TODO maybe rename lo -> lk ?
-    global cg_cache2
-    key = (li, lj, lo)
-    if key not in cg_cache2:
-        assert abs(li-lj) <= lo <= abs(li+lj)
-        coeffs = np.zeros(shape=(2*li+1, 2*lj+1, 2*lo+1))
-        for mi in range(-li, li+1):
-            for mj in range(-lj, lj+1):
-                for mo in range(-lo, lo+1):
-                    # https://docs.sympy.org/latest/modules/physics/quantum/cg.html
-                    cg = CG(li, mi, lj, mj, lo, mo).doit()
-                    coeffs[mi+li, mj+lj, mo+lo] = cg
-        cg_cache2[key] = coeffs
-    return cg_cache2[key]
-    
-##===============================================================================
-#cg_cache2 = dict()
-#
-## Formular 1.18 from https://sahussaintu.files.wordpress.com/2014/03/spherical_harmonics.pdf
-#
-#def get_clebsch_gordan_coefficients_new(li, lj, lo):
-#    from sympy.physics.quantum.cg import Wigner3j, CG
-#    #TODO maybe rename lo -> lk ?
-#    global cg_cache2
-#    key = (li, lj, lo)
-#    if key not in cg_cache2:
-#        assert abs(li-lj) <= lo <= abs(li+lj)
-#
-#        #cg0 = CG(li, 0, lj, 0, lo, 0).doit() 
-#        #numerator = (2*li+1) * (2*lj+1)
-#        #denominator = 4 * np.pi * (2*lo+1)
-#        #pre_factor = cg0 * np.sqrt(numerator / denominator)
-#
-#        coeffs = np.zeros(shape=(2*li+1, 2*lj+1, 2*lo+1))
-#        for mi in range(-li, li+1):
-#            for mj in range(-lj, lj+1):
-#                for mo in range(-lo, lo+1):
-#                    # https://docs.sympy.org/latest/modules/physics/quantum/cg.html
-#                    #cg = Wigner3j(li, mi, lj, mj, lo, mo).doit()
-#                    cg = CG(lo, mo, li, mi, lj, mj).doit()
-#                    coeffs[mi+li, mj+lj, mo+lo] = cg
-#        cg_cache2[key] = coeffs
-#    return cg_cache2[key]
-#
-
-#===============================================================================
-# This is most likely wrong because with p functions use yzx instead of xyz.
-def get_clebsch_gordan_coefficients_table(li, lj, lo):
-    assert abs(li-lj) <= lo <= abs(li+lj)
-    coeffs = np.zeros(shape=(2*li+1, 2*lj+1, 2*lo+1))
-    if li==0 and lj==0 and lo==0:
+def clebsch_gordan_coefficients(l1, l2, l3):
+    assert abs(l1-l2) <= l3 <= abs(l1+l2)
+    coeffs = np.zeros(shape=(2*l1+1, 2*l2+1, 2*l3+1))
+    if l1==0 and l2==0 and l3==0:
         # copy scalar
         coeffs[0,0,0] = 1.0
-    elif li==1 and lj==1 and lo==0:
+    elif l1==1 and l2==1 and l3==0:
         # vector dot product
         coeffs[0,0,0] = 1.0
         coeffs[1,1,0] = 1.0
         coeffs[2,2,0] = 1.0
-    elif li==0 and lj==1 and lo==1:
+    elif l1==0 and l2==1 and l3==1:
         # multiply vector by scalar
         coeffs[0,0,0] = 1.0
         coeffs[0,1,1] = 1.0
         coeffs[0,2,2] = 1.0
-    elif li==1 and lj==0 and lo==1:
+    elif l1==1 and l2==0 and l3==1:
         # multiply vector by scalar
         coeffs[0,0,0] = 1.0
         coeffs[1,0,1] = 1.0
         coeffs[2,0,2] = 1.0
-    elif li==1 and lj==1 and lo==1:
+    elif l1==1 and l2==1 and l3==1:
         # vector cross product
-        #TODO: note the order is (y, z, x), but does it really matter?
         coeffs[0,1,2] = 1.0
         coeffs[1,2,0] = 1.0
         coeffs[2,0,1] = 1.0
         coeffs[2,1,0] = -1.0
         coeffs[0,2,1] = -1.0
         coeffs[1,0,2] = -1.0
+    elif l1==0 and l2==2 and l3==2:
+        coeffs[0,0,0] = 1.0
+        coeffs[0,1,1] = 1.0
+        coeffs[0,2,2] = 1.0
+        coeffs[0,3,3] = 1.0
+        coeffs[0,4,4] = 1.0
+    elif l1==0 and l2==2 and l3==2:
+        # multiply vector by scalar
+        coeffs[0,0,0] = 1.0
+        coeffs[0,1,1] = 1.0
+        coeffs[0,2,2] = 1.0
+        coeffs[0,3,3] = 1.0
+        coeffs[0,4,4] = 1.0
+    elif l1==1 and l2==1 and l3==2:
+        c = 0.5 * np.sqrt(3)
+        coeffs[0,0,2] = -0.5
+        coeffs[0,0,4] = -c
+        coeffs[0,1,1] = c
+        coeffs[0,2,0] = c
+        coeffs[1,0,1] = c
+        coeffs[1,1,2] = 1.0
+        coeffs[1,2,3] = c
+        coeffs[2,0,0] = c
+        coeffs[2,1,3] = c
+        coeffs[2,2,2] = -0.5
+        coeffs[2,2,4] = c
+    elif l1==1 and l2==2 and l3==1:
+        c = 0.5 * np.sqrt(3)
+        coeffs[0,0,2] = -c
+        coeffs[0,1,1] = -c
+        coeffs[0,2,0] = 0.5
+        coeffs[0,4,0] = c
+        coeffs[1,1,0] = -c
+        coeffs[1,2,1] = -1.0
+        coeffs[1,3,2] = -c
+        coeffs[2,0,0] = -c
+        coeffs[2,2,2] = 0.5
+        coeffs[2,3,1] = -c
+        coeffs[2,4,2] = -c
+    elif l1==1 and l2==2 and l3==2:
+        c = 0.5 * np.sqrt(3)
+        coeffs[0,0,1] = 0.5
+        coeffs[0,1,0] = -0.5
+        coeffs[0,2,3] = -c
+        coeffs[0,3,2] = c
+        coeffs[0,3,4] = -0.5
+        coeffs[0,4,3] = 0.5
+        coeffs[1,0,4] = 1.0
+        coeffs[1,1,3] = 0.5
+        coeffs[1,3,1] = -0.5
+        coeffs[1,4,0] = -1.0
+        coeffs[2,0,3] = -0.5
+        coeffs[2,1,2] = -c
+        coeffs[2,1,4] = -0.5
+        coeffs[2,2,1] = c
+        coeffs[2,3,0] = 0.5
+        coeffs[2,4,1] = 0.5
+    elif l1==2 and l2==0 and l3==2:
+        # multiply vector by scalar
+        coeffs[0,0,0] = 1.0
+        coeffs[1,0,1] = 1.0
+        coeffs[2,0,2] = 1.0
+        coeffs[3,0,3] = 1.0
+        coeffs[4,0,4] = 1.0
+    elif l1==2 and l2==1 and l3==1:
+        c = 0.5 * np.sqrt(3)
+        coeffs[0,0,2] = -c
+        coeffs[0,2,0] = -c
+        coeffs[1,0,1] = -c
+        coeffs[1,1,0] = -c
+        coeffs[2,0,0] = 0.5
+        coeffs[2,1,1] = -1.0
+        coeffs[2,2,2] = 0.5
+        coeffs[3,1,2] = -c
+        coeffs[3,2,1] = -c
+        coeffs[4,0,0] = c
+        coeffs[4,2,2] = -c
+    elif l1==2 and l2==2 and l3==0:
+        # vector dot product
+        coeffs[0,0,0] = 1.0
+        coeffs[1,1,0] = 1.0
+        coeffs[2,2,0] = 1.0
+        coeffs[3,3,0] = 1.0
+        coeffs[4,4,0] = 1.0
+    elif l1==2 and l2==1 and l3==2:
+        c = 0.5 * np.sqrt(3)
+        coeffs[0,0,1] = 0.5
+        coeffs[0,1,4] = 1.0
+        coeffs[0,2,3] = -0.5
+        coeffs[1,0,0] = -0.5
+        coeffs[1,1,3] = 0.5
+        coeffs[1,2,2] = -c
+        coeffs[1,2,4] = -0.5
+        coeffs[2,0,3] = -c
+        coeffs[2,2,1] = c
+        coeffs[3,0,2] = c
+        coeffs[3,0,4] = -0.5
+        coeffs[3,1,1] = -0.5
+        coeffs[3,2,0] = 0.5
+        coeffs[4,0,3] = 0.5
+        coeffs[4,1,0] = -1.0
+        coeffs[4,2,1] = 0.5
+    elif l1==2 and l2==2 and l3==1:
+        c = 0.5 * np.sqrt(3)
+        coeffs[0,1,0] = 0.5
+        coeffs[0,3,2] = -0.5
+        coeffs[0,4,1] = 1.0
+        coeffs[1,0,0] = -0.5
+        coeffs[1,2,2] = -c
+        coeffs[1,3,1] = 0.5
+        coeffs[1,4,2] = -0.5
+        coeffs[2,1,2] = c
+        coeffs[2,3,0] = -c
+        coeffs[3,0,2] = 0.5
+        coeffs[3,1,1] = -0.5
+        coeffs[3,2,0] = c
+        coeffs[3,4,0] = -0.5
+        coeffs[4,0,1] = -1.0
+        coeffs[4,1,2] = 0.5
+        coeffs[4,3,0] = 0.5
+    elif l1==2 and l2==2 and l3==2:
+        c = 0.5 * np.sqrt(3)
+        coeffs[0,0,2] = 1.0
+        coeffs[0,1,3] = -c
+        coeffs[0,2,0] = 1.0
+        coeffs[0,3,1] = -c
+        coeffs[1,0,3] = -c
+        coeffs[1,1,2] = -0.5
+        coeffs[1,1,4] = c
+        coeffs[1,2,1] = -0.5
+        coeffs[1,3,0] = -c
+        coeffs[1,4,1] = c
+        coeffs[2,0,0] = 1.0
+        coeffs[2,1,1] = -0.5
+        coeffs[2,2,2] = -1.0
+        coeffs[2,3,3] = -0.5
+        coeffs[2,4,4] = 1.0
+        coeffs[3,0,1] = -c
+        coeffs[3,1,0] = -c
+        coeffs[3,2,3] = -0.5
+        coeffs[3,3,2] = -0.5
+        coeffs[3,3,4] = -c
+        coeffs[3,4,3] = -c
+        coeffs[4,1,1] = c
+        coeffs[4,2,4] = 1.0
+        coeffs[4,3,3] = -c
+        coeffs[4,4,2] = 1.0
+    else:
+        raise Exception("Not implemented")
     return coeffs
 
 
+#===============================================================================
+def test_cg_coeffs(lmax=2):
+    combis = []
+    for l1 in range(lmax+1):
+        for l2 in range(lmax+1):
+            for l3 in range(abs(l1-l2), min(l1+l2,lmax)+1):
+                combis.append([l1,l2,l3])
+
+    N = 10 # number of samples
+    for l1,l2,l3 in combis:
+        print(l1,l2,l3)
+        cg_coeffs = clebsch_gordan_coefficients(l1,l2,l3)
+        for i in range(N):
+            g = np.random.rand(3) * 2 * np.pi
+            D1 = wigner_d_num(g,l1)
+            D2 = wigner_d_num(g,l2)
+            D3 = wigner_d_num(g,l3)
+            lhs = np.einsum("ai,bj,ijc->abc", D1, D2, cg_coeffs)
+            rhs = np.einsum("abi,ic->abc", cg_coeffs, D3)
+            residual = lhs - rhs
+            r = np.max(np.abs(residual))
+            if r > 1e-13:
+                print("ERROR {},{},{}: {}".format(l1,l2,l3,r))
+
+
+#===============================================================================
+def rot_mat(g):
+    from scipy.spatial.transform import Rotation
+    # g = [alpha, beta, gamma]
+    return  Rotation.from_euler('zyx', g).as_dcm()
+
+
+#===============================================================================
+def wigner_d_num(g, l):
+    """Determine Wigner D-matrix numerically."""
+    # g: euler angles
+    # pick random directions
+    N = 2*2*(l+1)  # use twice as many too be sure
+    r1 = np.random.rand(N, 3)
+
+    # build rotation matrix
+    R = rot_mat(g)
+
+    # rotate random direction
+    r2 = np.einsum("ki,ij->kj", r1, R)
+
+    y1 = Y_l(r1, l=l)
+    y2 = Y_l(r2, l=l)
+
+    return np.linalg.pinv(y1).dot(y2)
+
 # https://sahussaintu.files.wordpress.com/2014/03/spherical_harmonics.pdf
+
+#EOF

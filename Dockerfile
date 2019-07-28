@@ -36,7 +36,7 @@ RUN pip3 install numpy pandas torch scipy livelossplot Cython requests ase
 # Tensorflow 2
 #https://www.tensorflow.org/alpha/guide/effective_tf2
 #https://www.tensorflow.org/alpha/guide/migration_guide
-RUN pip3 install tensorflow==2.0.0-alpha0
+RUN pip3 install tensorflow==2.0.0-beta1
 RUN pip3 install sympy
 RUN pip3 install quadpy
 
