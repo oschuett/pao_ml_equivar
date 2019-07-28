@@ -234,12 +234,14 @@ def test_cg_coeffs(lmax=2):
     combis = []
     for l1 in range(lmax+1):
         for l2 in range(lmax+1):
-            for l3 in range(abs(l1-l2), min(l1+l2,lmax)+1):
+            l3_min = abs(l1-l2)
+            l3_max = min(l1+l2, lmax)
+            for l3 in range(l3_min, l3_max+1):
                 combis.append([l1,l2,l3])
 
     N = 10 # number of samples
     for l1,l2,l3 in combis:
-        print(l1,l2,l3)
+        #print(l1,l2,l3)
         cg_coeffs = clebsch_gordan_coefficients(l1,l2,l3)
         for i in range(N):
             g = np.random.rand(3) * 2 * np.pi
