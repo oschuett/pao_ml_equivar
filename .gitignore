@@ -3,3 +3,5 @@
 .ipynb_checkpoints
 __pycache__
 cache
+2H2O_rotations/*/2H2O_pao44_eval.pao
+2H2O_rotations/*/2H2O_pao44_eval.out
