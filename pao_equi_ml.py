@@ -3,10 +3,11 @@ import warnings
 import torch
 import numpy as np
 import numpy.typing as npt
+import random as rd
 
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Any, Dict, List, Tuple
+from typing import Union, Optional, Dict, List, Tuple
 
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
@@ -14,6 +15,7 @@ from torch_geometric.loader import DataLoader
 from e3nn import o3
 from e3nn.nn import FullyConnectedNet
 from e3nn.math import soft_one_hot_linspace
+from e3nn.util.jit import script, trace, compile_mode, compile
 
 from sklearn.model_selection import train_test_split
 
@@ -98,51 +100,48 @@ class PAO_Object:
 
 # Torch Module for PAO learning
 # ======================================================================================
+@compile_mode('trace')
 class PAO_model(torch.nn.Module):
-    def __init__(
-        self,
-        max_radius,
-        num_layers,
-        num_neighbours,
-        pao_basis_size,
-        prim_basis_spec,
-        prim_basis_size,
-        irreps_input,
-        irreps_sh,
-        irreps_output,
-    ) -> None:
-        # === Setup ===
-        super(PAO_model, self).__init__()
-
+    def __init__(self,
+                 max_radius: int,
+                 num_layers: int,
+                 num_neighbours: int,
+                 pao_basis_size: int,
+                 prim_basis_spec: o3.Irreps,
+                 prim_basis_size: int,
+                 irreps_input: o3.Irreps,
+                 irreps_sh: o3.Irreps,
+                 irreps_output: o3.Irreps):
+        super().__init__()
         change_of_coord = t([
             [0., 0., 1.],
             [1., 0., 0.],
             [0., 1., 0.]
-        ])
-
+        ]) 
         self.dim = prim_basis_size
         self.max_radius = max_radius
         self.num_distances = 10
-        self.num_layers = num_layers
         self.num_neighbours = num_neighbours
         self.pao_basis_size = pao_basis_size
         self.prim_basis_spec = prim_basis_spec
         self.prim_basis_size = prim_basis_size
+        self.irreps_input = irreps_input
         self.irreps_sh = irreps_sh
         self.irreps_output = irreps_output
-        
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
         irreps_mid = o3.Irreps([(5, (l, (-1)**l)) for l in range(prim_basis_spec.lmax+1)])
         self.irreps_mid = irreps_mid
         
-        # === Network ===
+        #self.lin1 = o3.Linear(irreps_sh, irreps_sh)
         self.tp =  o3.FullyConnectedTensorProduct(irreps_input, irreps_sh, irreps_mid, shared_weights=False)
+        #self.lin2 = o3.Linear(irreps_mid, irreps_mid)
         self.tp_out = o3.FullyConnectedTensorProduct(irreps_mid, irreps_mid, irreps_output, shared_weights=True)
         
-        self.coord_change = self.tp_out.irreps_out.D_from_matrix(change_of_coord)
-
+        self.num_layers = num_layers
         self.fc = FullyConnectedNet([self.num_distances, num_layers, self.tp.weight_numel], torch.nn.functional.silu)
-        
-        # === Wigner Matrices ===
+        self.coord_change = self.tp_out.irreps_out.D_from_matrix(change_of_coord).to(self.device)
+
         idx_in = []
         aux_H_idx_in = 2*t(prim_basis_spec.ls)+1 
         self.wigner_dict = {}
@@ -158,17 +157,16 @@ class PAO_model(torch.nn.Module):
                         wigner_m = o3.wigner_3j(mu_i, mu_j, mu_ij)
                         wig_zero_factor = wigner_m[(2*mu_i+1)//2,(2*mu_j+1)//2,(2*mu_ij+1)//2]
                         wigner_m = wig_zero_factor*wigner_m
-                        self.wigner_dict[f"{mu_i}{mu_j}{mu_ij}"] = wigner_m.clone()
+                        self.wigner_dict[f"{mu_i}{mu_j}{mu_ij}"] = wigner_m.clone().to(self.device)
 
         idx_in = t(idx_in)
-        self.idx_out = torch.cumsum(idx_in, dim=0, dtype=int)                # rh-index into pred-vector
+        self.idx_out = torch.cumsum(idx_in, dim=0, dtype=int)              # rh-index into pred-vector
         self.aux_H_idx_out = torch.cumsum(aux_H_idx_in, dim=0, dtype=int)    # rh-index into auxiliary Hamiltonian
         self.idx_in = self.idx_out-idx_in                                    # lh-index of pred-vector
         self.aux_H_idx_in = self.aux_H_idx_out-aux_H_idx_in                  # lh-index into auxiliary Hamiltonian
 
-    # Not used, batches of size 1 also procede via the build_aux_H_batch method
     def build_aux_H(self, pred):
-        aux_H = torch.zeros((self.prim_basis_spec.dim,self.prim_basis_spec.dim))
+        aux_H = torch.zeros((self.prim_basis_spec.dim,self.prim_basis_spec.dim))        # auxiliary Hamiltonian
         jdx_shift = 0
 
         # Spherical Harmonic Factor 1
@@ -180,9 +178,7 @@ class PAO_model(torch.nn.Module):
                     # Check parity (even*even=even, odd*odd=even, even*odd=odd) and calculate coefficients only for match
                     if mu_i%2==mu_j%2 and mu_ij%2==0 or mu_i%2!=mu_j%2 and mu_ij%2==1:
                         # Contraction per shell
-                        contraction_coefficients = torch.matmul(
-                            self.wigner_dict[f"{mu_i}{mu_j}{mu_ij}"], 
-                            pred[self.idx_in[jdx_shift]:self.idx_out[jdx_shift]])
+                        contraction_coefficients = torch.matmul(self.wigner_dict[f"{mu_i}{mu_j}{mu_ij}"], pred[self.idx_in[jdx_shift]:self.idx_out[jdx_shift]])
                         # Add shell contribution to resp. block in the auxiliary Hamiltionan
                         aux_H[self.aux_H_idx_in[idx]:self.aux_H_idx_out[idx],self.aux_H_idx_in[jdx+idx]:self.aux_H_idx_out[jdx+idx]] = \
                         aux_H[self.aux_H_idx_in[idx]:self.aux_H_idx_out[idx],self.aux_H_idx_in[jdx+idx]:self.aux_H_idx_out[jdx+idx]]   \
@@ -195,7 +191,7 @@ class PAO_model(torch.nn.Module):
         return aux_H
 
     def build_aux_H_batch(self, batch, pred):
-        aux_H = torch.zeros((batch, self.prim_basis_spec.dim,self.prim_basis_spec.dim))
+        aux_H = torch.zeros((batch, self.prim_basis_spec.dim,self.prim_basis_spec.dim), device=self.device)        # auxiliary Hamiltonian
         jdx_shift = 0
 
         # Spherical Harmonic Factor 1
@@ -229,19 +225,21 @@ class PAO_model(torch.nn.Module):
                         jdx_shift += 1
         return aux_H
 
-    def forward(self, data):
-        data.x.requires_grad_()
-        batch_size = len(data.batch.unique())
-        n_edge_vec = data.pos.shape[0]
-        edge_vec = data.pos
-        edge_vec = torch.sub(edge_vec.reshape(batch_size,n_edge_vec//batch_size,3), data.x.reshape(batch_size,3).unsqueeze(dim=1))
+    def forward(self, data: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        edge_vec = data["pos"]
+        batch_size = edge_vec.shape[0]
+        num_neighbors = edge_vec.shape[1]
+        n_edge_vec = edge_vec.shape[0]*edge_vec.shape[1]
+        edge_vec = torch.sub(edge_vec, data["x"].unsqueeze(dim=1))
         edge_vec = edge_vec.reshape(n_edge_vec, 3)
-        f_in = data.z
-        x = o3.spherical_harmonics(self.irreps_sh, edge_vec, normalize=True, normalization='component')
+        f_in = data["z"].reshape(n_edge_vec, data["z"].shape[-1])
+        x = o3.spherical_harmonics(l=self.irreps_sh, x=edge_vec, normalize=True, normalization='component')
         emb = soft_one_hot_linspace(x=edge_vec.norm(dim=1), start=0.0, end=self.max_radius, number=self.num_distances, 
-                                    basis='smooth_finite', cutoff=True).mul(self.num_distances**0.5)
+                                    basis='cosine', cutoff=True).mul(self.num_distances**0.5)
+        #x = self.lin1(sh)
         aux_H = self.tp(f_in, x, self.fc(emb))
-        aux_H = aux_H.reshape((batch_size,aux_H.shape[0]//batch_size,aux_H.shape[1])).sum(dim=1).div(self.num_neighbours**0.5)
+        aux_H = aux_H.reshape((batch_size,aux_H.shape[0]//batch_size,aux_H.shape[1])).sum(dim=1).div(num_neighbors**0.5)
+        #aux_H = self.lin2(aux_H)
         aux_H = self.tp_out(aux_H, aux_H)
         aux_H = torch.matmul(aux_H, self.coord_change)
         aux_H = self.build_aux_H_batch(batch_size, aux_H)
@@ -249,10 +247,104 @@ class PAO_model(torch.nn.Module):
         # Eigendecomposition of auxiliary hamiltonian to extract PAO basis vectors from eigenvectors
         L, Q = torch.linalg.eigh(aux_H)
         pao_vectors = torch.transpose(Q[:,:,:self.pao_basis_size], dim0=1, dim1=2)
-        self.zero_grad()
-        pao_vectors.backward(torch.ones_like(pao_vectors), retain_graph=True)
-        gradients = data.x.grad.reshape(batch_size,3)
-        return pao_vectors, gradients       
+
+        data["pao_vectors"] = pao_vectors
+        return data
+
+    def _make_tracing_inputs(self, n: int):
+        """This is needed to generate pseudo-input for the tracing of the module with TorchScript.
+        """
+        return [
+            {
+                'forward': (
+                    {
+                        "x": torch.rand((3,3), device=self.device),
+                        "pos": torch.rand((3,5,3), device=self.device),
+                        "y": torch.rand((3,4,5), device=self.device),
+                        "z": torch.rand((3,5,2), device=self.device)
+                    },
+                )
+            }
+            for _ in range(n)
+        ]
+
+# Wrapper for Torch Module for PAO Inference with gradient output
+# Heavily based on how output of forces is implemented in Nequip
+# ======================================================================================
+@compile_mode('script')
+class GradOutput(torch.nn.Module):
+    def __init__(
+        self,
+        func: PAO_model,
+        of: str,
+        wrt: Union[str, List[str]],
+        out_field: Optional[List[str]] = None,
+        sign: float = 1.0,
+    ):
+        super().__init__(
+        )
+        sign = float(sign)
+        assert sign in (1.0, -1.0)
+        self.sign = sign
+        self._negate = sign == -1.0
+        self.of = of
+        self.skip = False
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        # TO DO: maybe better to force using list?
+        if isinstance(wrt, str):
+            wrt = [wrt]
+        if isinstance(out_field, str):
+            out_field = [out_field]
+        self.wrt = wrt
+        self.func = func
+        if out_field is None:
+            self.out_field = [f"d({of})/d({e})" for e in self.wrt]
+        else:
+            assert len(out_field) == len(
+                self.wrt
+            ), "Out field names must be given for all w.r.t tensors"
+            self.out_field = out_field
+
+    def forward(self, data: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+
+        if self.skip:
+            return self.func(data)
+
+        # set req grad
+        wrt_tensors = []
+        old_requires_grad: List[bool] = []
+        grad_outputs: List[Optional[torch.Tensor]] = []
+        for k in self.wrt:
+            old_requires_grad.append(data[k].requires_grad)
+            data[k].requires_grad_(True)
+            wrt_tensors.append(data[k])
+
+        # run func
+        data = self.func(data)
+
+        for k in self.wrt:
+            grad_outputs.append(torch.ones_like(data[self.of], device=self.device))
+            
+        # Get grads
+        grads = torch.autograd.grad(
+            inputs=wrt_tensors, outputs=[data[self.of],], grad_outputs=grad_outputs, retain_graph=True)
+        
+        # return
+        for out, grad in zip(self.out_field, grads):
+            if grad is None:
+                # From the docs: "If an output doesn’t require_grad, then the gradient can be None"
+                raise RuntimeError("Something is wrong, gradient couldn't be computed")
+
+            if self._negate:
+                grad = torch.neg(grad)
+            data[out] = grad.detach()
+
+        # unset requires_grad_
+        for req_grad, k in zip(old_requires_grad, self.wrt):
+            data[k].requires_grad_(req_grad)
+
+        return data       
         
    
 # ======================================================================================
@@ -491,6 +583,39 @@ def generate_train_test_datasets(pao_objects: Dict[KindName, List[PAO_Object]], 
 
 
 # ======================================================================================
+def generate_train_test_data(pao_objects, test_size=0.2):
+    r"""Create training and testing data dictionaries from PAO objects.
+    """
+    datadicts = {}
+    for atomtype in pao_objects:
+        train_data, test_data = train_test_split(pao_objects[atomtype], test_size=test_size)
+        datadicts[atomtype] = {
+            "train": train_data,
+            "test": test_data
+        }
+    return datadicts
+
+
+# ======================================================================================
+def generate_batched_dict(pao_objects, batch_size):
+    n_samples = len(pao_objects)
+    idxs = list(range(n_samples))
+    rd.shuffle(idxs)
+    batches = n_samples//batch_size
+    batched_datadicts = []
+    for batch in range(batches):
+        batch_idxs = idxs[batch*batch_size:(batch+1)*batch_size]
+        batch_dict = {
+                "x": torch.stack([pao_objects[idx].center for idx in batch_idxs]),
+                "pos": torch.stack([pao_objects[idx].coords for idx in batch_idxs]),
+                "y": torch.stack([pao_objects[idx].label for idx in batch_idxs]),
+                "z": torch.stack([pao_objects[idx].atomkind for idx in batch_idxs])
+        }
+        batched_datadicts.append(batch_dict)
+    return batched_datadicts
+
+
+# ======================================================================================
 def generate_train_dataloader(datasets: Dict[KindName, List[PAO_Object]], batch_size=32):
     r"""Create dataloaders for training and validation from datasets.
     """
@@ -503,14 +628,13 @@ def generate_train_dataloader(datasets: Dict[KindName, List[PAO_Object]], batch_
 
 
 # ======================================================================================
-def init_pao_models(pao_objects: Dict[KindName, List[PAO_Object]], cutoff, num_neighbors, num_layers=32):
+def init_pao_models(pao_objects: Dict[KindName, List[PAO_Object]], cutoff, num_neighbors, num_layers=32, require_grad=True):
     r"""Initialize PAO models for each atomtype.
     """
     models = {}
     for atomtype in pao_objects:
         irreps_input = irreps_input_from_pao_object(pao_objects[atomtype][0])
         pao_basis_size = pao_objects[atomtype][0].kind.pao_basis_size
-        # TO DO: prim_basis_spec generated form primitive basis set specification. Right, just read from a dictionary.
         prim_basis_spec = o3.Irreps(prim_basis_specs[atomtype])
         prim_basis_size = prim_basis_spec.dim
         irreps_sh = o3.Irreps.spherical_harmonics(lmax=prim_basis_spec.lmax)
@@ -529,21 +653,27 @@ def init_pao_models(pao_objects: Dict[KindName, List[PAO_Object]], cutoff, num_n
             irreps_sh=irreps_sh,
             irreps_output=irreps_output,
             )
+            if require_grad:
+                gradModel = GradOutput(func=models[atomtype], of="pao_vectors", wrt=["x"], out_field=["gradient"], sign=-1)
+                models[atomtype] = gradModel
+            
     return models
 
 
 # ======================================================================================
-def train_model_epoch(model, optimizer, dataloader, batch_loss_average=10):
+def train_model_epoch(model, optimizer, pao_objects, batch_size, batch_loss_average=10):
     r"""Train PAO model for one epoch.
     """
     running_loss = 0.
     last_loss = 0.
 
-    for i, data in enumerate(dataloader):
-        label = data.y.reshape((len(data), model.pao_basis_size, model.prim_basis_size))
-        pred, gradient = model(data)
+    batched_dicts = generate_batched_dict(pao_objects, batch_size)
+    for i, data in enumerate(batched_dicts):
+        for key, value in data.items():
+            data[key] = data[key].to(model.device)
+        data = model(data)
         optimizer.zero_grad()
-        loss = loss_function_ortho_projector_batch(pred, label)
+        loss = loss_function_ortho_projector_batch(data["pao_vectors"], data["y"])
         loss.backward()
         optimizer.step()
         running_loss += loss.item()
@@ -556,15 +686,17 @@ def train_model_epoch(model, optimizer, dataloader, batch_loss_average=10):
 
 
 # ======================================================================================
-def validate_model(model, vdataloader):
+def validate_model(model, pao_objects, batch_size):
     r"""Validate PAO model.
     """
     running_vloss = 0.
 
-    for i, vdata in enumerate(vdataloader):
-        label = vdata.y.reshape((len(vdata), model.pao_basis_size, model.prim_basis_size))
-        pred, gradient = model(vdata)
-        vloss = loss_function_ortho_projector_batch(pred, label)
+    batched_dicts = generate_batched_dict(pao_objects, batch_size)
+    for i, vdata in enumerate(batched_dicts):
+        for key, value in vdata.items():
+            vdata[key] = vdata[key].to(model.device)
+        vdata = model(vdata)
+        vloss = loss_function_ortho_projector_batch(vdata["pao_vectors"], vdata["y"])
         running_vloss += vloss.item()
 
     avg_vloss = running_vloss/(i+1)
@@ -572,30 +704,31 @@ def validate_model(model, vdataloader):
 
 
 # ======================================================================================
-def train_model(model, optimizer, num_epochs, dataloader, vdataloader, batch_loss_average=10):
+def train_model(model, optimizer, num_epochs, train_data, test_data, batch_size, batch_loss_average=10):
     r"""Full training of PAO model.
     """
     train_loss = torch.zeros(num_epochs)
     validation_loss = torch.zeros(num_epochs)
+    model.to(model.device)
 
     for epoch in range(num_epochs):
         # === Train ===
         model.train(True)
-        train_loss[epoch] = train_model_epoch(model, optimizer, dataloader, batch_loss_average)
+        train_loss[epoch] = train_model_epoch(model, optimizer, train_data, batch_size, batch_loss_average)
         # === Validate ===
         model.eval()
-        validation_loss[epoch] = validate_model(model, vdataloader)
+        validation_loss[epoch] = validate_model(model, test_data, batch_size)
 
         print(f"training epoch {epoch:3d} | loss {train_loss[epoch]:.8e} | validation loss {validation_loss[epoch]:.8e}")
-    
     return train_loss, validation_loss
 
 
 # ======================================================================================
 def save_model(model, model_name):
-    r"""Save PAO model.
+    r"""Compile and save PAO model.
     """
-    torch.save(model, f"{model_name}.pth")
+    script_model = compile(model, trace_options={"strict": False})
+    script_model.save(f"{model_name}.pth")
     return
 
 
@@ -621,14 +754,13 @@ def main():
     atomtypes = ["O", "H"]
     print(f"Running Equi PAO training for atoms {atomtypes}.")
     test_ratio = 0.2
-    batch_size = 4
+    batch_size = 16
     for path in sorted(Path().glob("training_data/*/*-1_0.pao")):
         paths.append(path)
 
     pao_objects = pao_objects_from_paths(paths)
     print("Generating PAO objects from provided paths.")
-    datasets = generate_train_test_datasets(pao_objects, test_ratio)
-    dataloaders, vdataloaders = generate_train_dataloader(datasets, batch_size=batch_size)
+    datasets = generate_train_test_data(pao_objects, 0.2)
     print(f"Data split into training and validation data with test ratio of {test_ratio:.2e}")
 
     cutoff = 4.0
@@ -636,24 +768,30 @@ def main():
     learning_rate = 1e-3
     train_loss = {}
     validation_loss = {}
-    epochs = 300
-    batch_loss_average = 10
+    epochs = {"O": 1000,
+              "H": 500}
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(f"Training on {device}.")
 
     models = init_pao_models(pao_objects, cutoff, num_neighbors, num_layers=32)
     for atomtype in atomtypes:
         print(f"Training Equi PAO Model for atom {atomtype} for {epochs} epochs.")
+        batch_loss_average = len(datasets[atomtype]["train"])//batch_size
         optim = torch.optim.Adam(models[atomtype].parameters(), lr=learning_rate)
         train_loss[atomtype], validation_loss[atomtype] = train_model(
             models[atomtype],
             optim,
-            epochs,
-            dataloaders[atomtype],
-            vdataloaders[atomtype],
-            batch_loss_average)
+            epochs[atomtype],
+            datasets[atomtype]["train"],
+            datasets[atomtype]["test"],
+            batch_size,
+            batch_loss_average
+            )
         print(f"Finished training Equi PAO Model for atom {atomtype}.")
         plot_loss(train_loss[atomtype], validation_loss[atomtype], atomtype)
-        save_model(models[atomtype], f"pao_equi_model_{atomtype}")
-        print(f"Save Equi PAO Model for atom {atomtype}.")
+        save_model(models[atomtype], f"equi_pao_model_{atomtype}")
+        print(f"Saved Equi PAO Model for atom {atomtype}.")
         
 
 if __name__ == "__main__":
