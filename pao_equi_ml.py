@@ -226,13 +226,27 @@ class PAO_model(torch.nn.Module):
         return aux_H
 
     def forward(self, data: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        edge_vec = data["pos"]
-        batch_size = edge_vec.shape[0]
-        num_neighbors = edge_vec.shape[1]
-        n_edge_vec = edge_vec.shape[0]*edge_vec.shape[1]
-        edge_vec = torch.sub(edge_vec, data["x"].unsqueeze(dim=1))
+        edge_vec = data["pos"].to(self.device)
+        central_atom = data["x"].to(self.device)
+        atomkind = data["z"].to(self.device)
+
+        if len(edge_vec.shape) == 3:
+            batch_size = edge_vec.shape[0]
+            num_neighbors = edge_vec.shape[1]
+            n_edge_vec = edge_vec.shape[0]*edge_vec.shape[1]
+            central_atom = central_atom.unsqueeze(dim=1)
+
+        elif len(edge_vec.shape) == 2:
+            num_neighbors = edge_vec.shape[0]
+            batch_size = 1
+            n_edge_vec = num_neighbors
+            edge_vec = edge_vec.unsqueeze(dim=0)
+            central_atom = central_atom.unsqueeze(dim=0)
+            atomkind = atomkind.unsqueeze(dim=0)
+
+        edge_vec = torch.sub(edge_vec, central_atom)
         edge_vec = edge_vec.reshape(n_edge_vec, 3)
-        f_in = data["z"].reshape(n_edge_vec, data["z"].shape[-1])
+        f_in = atomkind.reshape(n_edge_vec, atomkind.shape[-1])
         x = o3.spherical_harmonics(l=self.irreps_sh, x=edge_vec, normalize=True, normalization='component')
         emb = soft_one_hot_linspace(x=edge_vec.norm(dim=1), start=0.0, end=self.max_radius, number=self.num_distances, 
                                     basis='cosine', cutoff=True).mul(self.num_distances**0.5)
@@ -258,10 +272,9 @@ class PAO_model(torch.nn.Module):
             {
                 'forward': (
                     {
-                        "x": torch.rand((3,3), device=self.device),
-                        "pos": torch.rand((3,5,3), device=self.device),
-                        "y": torch.rand((3,4,5), device=self.device),
-                        "z": torch.rand((3,5,2), device=self.device)
+                        "x": torch.rand(3, device=self.device),
+                        "pos": torch.rand((5,3), device=self.device),
+                        "z": torch.rand((5,2), device=self.device)
                     },
                 )
             }
@@ -669,11 +682,12 @@ def train_model_epoch(model, optimizer, pao_objects, batch_size, batch_loss_aver
 
     batched_dicts = generate_batched_dict(pao_objects, batch_size)
     for i, data in enumerate(batched_dicts):
+        label = data.pop("y").to(model.device)
         for key, value in data.items():
             data[key] = data[key].to(model.device)
         data = model(data)
         optimizer.zero_grad()
-        loss = loss_function_ortho_projector_batch(data["pao_vectors"], data["y"])
+        loss = loss_function_ortho_projector_batch(data["pao_vectors"], label)
         loss.backward()
         optimizer.step()
         running_loss += loss.item()
@@ -693,10 +707,11 @@ def validate_model(model, pao_objects, batch_size):
 
     batched_dicts = generate_batched_dict(pao_objects, batch_size)
     for i, vdata in enumerate(batched_dicts):
+        label = vdata.pop("y").to(model.device)
         for key, value in vdata.items():
             vdata[key] = vdata[key].to(model.device)
         vdata = model(vdata)
-        vloss = loss_function_ortho_projector_batch(vdata["pao_vectors"], vdata["y"])
+        vloss = loss_function_ortho_projector_batch(vdata["pao_vectors"], label)
         running_vloss += vloss.item()
 
     avg_vloss = running_vloss/(i+1)
@@ -776,7 +791,7 @@ def main():
 
     models = init_pao_models(pao_objects, cutoff, num_neighbors, num_layers=32)
     for atomtype in atomtypes:
-        print(f"Training Equi PAO Model for atom {atomtype} for {epochs} epochs.")
+        print(f"Training Equi PAO Model for atom {atomtype} for {epochs[atomtype]} epochs.")
         batch_loss_average = len(datasets[atomtype]["train"])//batch_size
         optim = torch.optim.Adam(models[atomtype].parameters(), lr=learning_rate)
         train_loss[atomtype], validation_loss[atomtype] = train_model(
@@ -790,9 +805,9 @@ def main():
             )
         print(f"Finished training Equi PAO Model for atom {atomtype}.")
         plot_loss(train_loss[atomtype], validation_loss[atomtype], atomtype)
-        save_model(models[atomtype], f"equi_pao_model_{atomtype}")
+        save_model(models[atomtype], f"pao_equi_model_{atomtype}")
         print(f"Saved Equi PAO Model for atom {atomtype}.")
-        
+
 
 if __name__ == "__main__":
     main()
