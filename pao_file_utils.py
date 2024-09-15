@@ -8,6 +8,7 @@ import numpy.typing as npt
 KindName = str
 NDArray = npt.NDArray[np.float64]
 
+
 # ======================================================================================
 @dataclass
 class AtomicKind:
