@@ -21,18 +21,20 @@ class AtomicKind:
 
 # ======================================================================================
 @dataclass
-class PaoSample:
-    rel_coords: NDArray
-    xblock: NDArray
+class PaoFile:
+    kinds: Dict[KindName, AtomicKind]
+    atom2kind: List[KindName]
+    cell: NDArray
+    coords: NDArray
+    xblocks: List[NDArray]
 
 
 # ======================================================================================
-def parse_pao_file(
-    path: Path,
-) -> Tuple[Dict[KindName, AtomicKind], List[KindName], NDArray, List[NDArray]]:
+def parse_pao_file(path: Path) -> PaoFile:
     ikind2name = {}  # maps kind index to kind name
     atom2kind: List[KindName] = []  # maps atom index to kind name
     kinds: Dict[KindName, AtomicKind] = {}
+    cell = []
     coords_list = []
     xblocks = []
 
@@ -59,6 +61,9 @@ def parse_pao_file(
             ikind = int(parts[1])
             kinds[ikind2name[ikind]].pao_basis_size = int(parts[2])
 
+        elif parts[0] == "Cell":
+            cell = np.array(parts[1:], float).reshape(3, 3)
+
         elif parts[0] == "Atom":
             atom2kind.append(parts[2])
             coords_list.append(parts[3:])
@@ -75,23 +80,7 @@ def parse_pao_file(
         m = kinds[kind_name].pao_basis_size
         xblocks[iatom] = xblocks[iatom].reshape(m, n)
 
-    return kinds, atom2kind, coords, xblocks
-
-
-# ======================================================================================
-def append_samples(
-    samples: Dict[KindName, List[PaoSample]],
-    kinds: Dict[KindName, AtomicKind],
-    atom2kind: List[KindName],
-    coords: NDArray,
-    xblocks: List[NDArray],
-) -> None:
-    for iatom, kind_name in enumerate(atom2kind):
-        rel_coords = coords - coords[iatom, :]
-        sample = PaoSample(rel_coords=rel_coords, xblock=xblocks[iatom])
-        if kind_name not in samples:
-            samples[kind_name] = []
-        samples[kind_name].append(sample)
+    return PaoFile(kinds, atom2kind, cell, coords, xblocks)
 
 
 # ======================================================================================
