@@ -1,3 +1,5 @@
+# author: Ole Schuett
+
 import re
 from pathlib import Path
 from dataclasses import dataclass
@@ -31,6 +33,8 @@ class PaoFile:
 
 # ======================================================================================
 def parse_pao_file(path: Path) -> PaoFile:
+    assert str(path).endswith(".pao")
+
     ikind2name = {}  # maps kind index to kind name
     atom2kind: List[KindName] = []  # maps atom index to kind name
     kinds: Dict[KindName, AtomicKind] = {}
@@ -131,7 +135,7 @@ def write_pao_file(
 def read_cp2k_energy(path: Path) -> float:
     try:
         content = path.read_text()
-        m = re.search("ENERGY\|(.*)", content)
+        m = re.search(r"ENERGY\|(.*)", content)
         assert m
         return float(m.group(1).split()[-1])
     except:

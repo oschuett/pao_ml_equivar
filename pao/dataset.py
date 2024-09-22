@@ -1,20 +1,13 @@
 # author: Ole Schuett
 
+import torch
 import numpy as np
+import scipy.spatial
 from pathlib import Path
 from typing import List
-import torch
 from torch.utils.data import Dataset
-from pao_file_utils import parse_pao_file
-import scipy.spatial
 
-
-# ======================================================================================
-def pao_loss_function(prediction, label):
-    # This assumes the columns of prediction and label are orthonormal.
-    p1 = prediction.transpose(-2, -1) @ prediction
-    p2 = label.transpose(-2, -1) @ label
-    return (p1 - p2).pow(2).sum()
+from .io import parse_pao_file
 
 
 # ======================================================================================
@@ -29,6 +22,7 @@ class PaoDataset(Dataset):
         kind_names = np.array(sorted(kinds.keys()))
         self.num_kinds = len(kinds)
         self.kind = kinds[kind_name]
+        self.kind_name = kind_name
 
         as_tensor = lambda x: torch.tensor(np.array(x, dtype=np.float32))
         # Load all training data files.

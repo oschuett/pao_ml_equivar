@@ -1,6 +1,5 @@
 # author: Ole Schuett
 
-
 import torch
 import e3nn
 import warnings

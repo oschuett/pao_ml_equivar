@@ -2,14 +2,31 @@
 
 # author: Ole Schuett
 
+import torch
 import argparse
-from pao_model import PaoModel
-from pao_dataset import PaoDataset, pao_loss_function
 from e3nn import o3
 from pathlib import Path
-import torch
 from torch.utils.data import DataLoader
-from pao_file_utils import parse_pao_file
+
+from pao.model import PaoModel
+from pao.dataset import PaoDataset
+from pao.training import train_model
+
+
+# ======================================================================================
+def train(model, dataloader, steps) -> None:
+    # Train the model.
+    optim = torch.optim.Adam(model.parameters())
+    for step in range(steps + 1):
+        optim.zero_grad()
+        for neighbors_relpos, neighbors_features, label in dataloader:
+            pred = model(neighbors_relpos, neighbors_features)
+            loss = pao_loss_function(pred, label)
+            loss.backward()
+        if step % 1000 == 0:
+            print(f"step: {step:5d} | loss: {loss:.8e}")
+        optim.step()
+    print(f"Training complete, final loss: {loss:.8e}")
 
 
 # ======================================================================================
@@ -17,15 +34,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Trains an equivariant PAO-ML model.")
     parser.add_argument("--kind", required=True)
     parser.add_argument("--steps", type=int, default=10000)
+    parser.add_argument("--batch", type=int, default=64)
+    parser.add_argument("--model", type=Path, default="trained_pao_model.pt")
 
     # Hyper-parameters - TODO tune default values
     parser.add_argument("--neighbors", type=int, default=6)
     parser.add_argument("--distances", type=int, default=10)
     parser.add_argument("--layers", type=int, default=16)
     parser.add_argument("--cutoff", type=float, default=6.0)
-
-    # Training parameters.
-    parser.add_argument("--batch", type=int, default=64)
 
     # Training data files are passed as positional arguments.
     parser.add_argument("training_data", type=Path, nargs="+")
@@ -36,13 +52,13 @@ def main() -> None:
         kind_name=args.kind, num_neighbors=args.neighbors, files=args.training_data
     )
     dataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True)
-    print(f"Found {len(dataset)} training samples.")
+    print(f"Found {len(dataset)} training samples of kind '{args.kind}'.")
 
     # Irreps of primary basis.
     assert dataset.kind.prim_basis_name == "DZVP-MOLOPT-GTH"  # TODO support more
     prim_basis_specs = {
-        "O": "2x0e + 2x1o + 1x2e",  # DZVP-MOLOPT-GTH for Oxygen: two s-shells, two p-shells, one d-shell
-        "H": "2x0e + 1x1o",  # DZVP-MOLOPT-GTH for Hydrogen: two s-shells, one p-shell
+        "O": "2x0e + 2x1o + 1x2e",  # two s-shells, two p-shells, one d-shell
+        "H": "2x0e + 1x1o",  # two s-shells, one p-shell
     }
 
     # Construct the model.
@@ -62,23 +78,21 @@ def main() -> None:
     model_script = torch.jit.script(model)
 
     # Train the model.
-    optim = torch.optim.Adam(model_script.parameters())
-    for step in range(args.steps + 1):
-        optim.zero_grad()
-        for neighbors_relpos, neighbors_features, label in dataloader:
-            pred = model_script(neighbors_relpos, neighbors_features)
-            loss = pao_loss_function(pred, label)
-            loss.backward()
-        if step % 1000 == 0:
-            print(f"step: {step:5d} | loss: {loss:.8e}")
-        optim.step()
-    print(f"Training complete, final loss: {loss:.8e}")
+    train_model(model_script, dataloader, args.steps)
 
     # Save the model.
-    output_fn = f"pao_model_{args.kind}.pt"
-    metadata = {"foo": "bar"}  # TODO add more metadata
-    model_script.save(output_fn, _extra_files=metadata)
-    print(f"Saved model to file: {output_fn}")
+    metadata = {
+        "pao_model_version": "1",
+        "num_neighbors": str(args.neighbors),
+        "num_distances": str(args.neighbors),
+        "num_layers": str(args.layers),
+        "cutoff": str(args.cutoff),
+        "kind_name": args.kind,
+        "prim_basis_name": dataset.kind.prim_basis_name,
+        "pao_basis_size": str(dataset.kind.pao_basis_size),
+    }
+    model_script.save(args.model, _extra_files=metadata)
+    print(f"Saved model to file: {args.model}")
 
 
 # ======================================================================================
