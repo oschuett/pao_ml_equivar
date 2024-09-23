@@ -1,0 +1,717 @@
+ DBCSR| CPU Multiplication driver                                           XSMM (U)
+ DBCSR| Multrec recursion limit                                              512 (U)
+ DBCSR| Multiplication stack size                                           1000 (D)
+ DBCSR| Maximum elements for images                                    UNLIMITED (U)
+ DBCSR| Multiplicative factor virtual images                                   1 (U)
+ DBCSR| Use multiplication densification                                       T (D)
+ DBCSR| Multiplication size stacks                                             3 (U)
+ DBCSR| Use memory pool for CPU allocation                                     F (U)
+ DBCSR| Number of 3D layers                                               SINGLE (U)
+ DBCSR| Use MPI memory allocation                                              F (U)
+ DBCSR| Use RMA algorithm                                                      F (U)
+ DBCSR| Use Communication thread                                               T (U)
+ DBCSR| Communication thread load                                             87 (D)
+ DBCSR| MPI: My process id                                                     0
+ DBCSR| MPI: Number of processes                                              32
+ DBCSR| OMP: Current number of threads                                         1
+ DBCSR| OMP: Max number of threads                                             1
+ DBCSR| Split modifier for TAS multiplication algorithm                  1.0E+00 (U)
+
+
+  **** **** ******  **  PROGRAM STARTED AT               2024-09-23 17:37:45.152
+ ***** ** ***  *** **   PROGRAM STARTED ON                                moritz
+ **    ****   ******    PROGRAM STARTED BY                                   ole
+ ***** **    ** ** **   PROGRAM PROCESS ID                                157031
+  **** **  *******  **  PROGRAM STARTED IN /home/ole/git/pao_ml_equivar/64H2O_MD
+                                           /Frame2400
+
+ CP2K| version string:                 CP2K version 2024.3 (Development Version)
+ CP2K| source code revision number:                                  git:3f890bb
+ CP2K| cp2kflags: omp libint fftw3 libxc libgrpp pexsi elpa parallel scalapack c
+ CP2K|            osma quip deepmd xsmm plumed2 spglib libdftd4 sirius libvori l
+ CP2K|            libbqb libvdwxc hdf5
+ CP2K| is freely available from                            https://www.cp2k.org/
+ CP2K| Program compiled at                          Mo 23 Sep 2024 17:17:04 CEST
+ CP2K| Program compiled on                                                moritz
+ CP2K| Program compiled for                                                local
+ CP2K| Data directory path                               /home/ole/git/cp2k/data
+ CP2K| Input file name                                             64H2O_ref.inp
+
+ GLOBAL| Force Environment number                                              1
+ GLOBAL| Basis set file name                                        BASIS_MOLOPT
+ GLOBAL| Potential file name                                      GTH_POTENTIALS
+ GLOBAL| MM Potential file name                                     MM_POTENTIAL
+ GLOBAL| Coordinate file name                                         coords.xyz
+ GLOBAL| Method name                                                        CP2K
+ GLOBAL| Project name                                                  64H2O_ref
+ GLOBAL| Run type                                                         ENERGY
+ GLOBAL| FFT library                                                       FFTW3
+ GLOBAL| Diagonalization library                                            ELPA
+ GLOBAL| DGEMM library                                                      BLAS
+ GLOBAL| Minimum number of eigenvectors for ELPA usage                        16
+ GLOBAL| Orthonormality check for eigenvectors                          DISABLED
+ GLOBAL| Matrix multiplication library                                     COSMA
+ GLOBAL| All-to-all communication in single precision                          F
+ GLOBAL| FFTs using library dependent lengths                                  F
+ GLOBAL| Grid backend                                                       AUTO
+ GLOBAL| Global print level                                                  LOW
+ GLOBAL| MPI I/O enabled                                                       T
+ GLOBAL| Total number of message passing processes                            32
+ GLOBAL| Number of threads for this process                                    1
+ GLOBAL| This output is from process                                           0
+ GLOBAL| Stack size for threads created by OpenMP (OMP_STACKSIZE)        default
+ GLOBAL| CPU model name           AMD Ryzen Threadripper 3970X 32-Core Processor
+ GLOBAL| CPUID                                                              1002
+
+ MEMORY| system memory details [Kb]
+ MEMORY|                        rank 0           min           max       average
+ MEMORY| MemTotal            131752136     131752136     131752136     131752136
+ MEMORY| MemFree             118428620     118428620     118428620     118428620
+ MEMORY| Buffers                259804        259804        259804        259804
+ MEMORY| Cached                7114520       7114520       7114520       7114520
+ MEMORY| Slab                   705684        705684        705684        705684
+ MEMORY| SReclaimable           271008        271008        271008        271008
+ MEMORY| MemLikelyFree       126073952     126073952     126073952     126073952
+
+
+ GENERATE|  Preliminary Number of Bonds generated:                             0
+ GENERATE|  Achieved consistency in connectivity generation.
+
+ *******************************************************************************
+ *******************************************************************************
+ **                                                                           **
+ **     #####                         ##              ##                      **
+ **    ##   ##            ##          ##              ##                      **
+ **   ##     ##                       ##            ######                    **
+ **   ##     ##  ##   ##  ##   #####  ##  ##   ####   ##    #####    #####    **
+ **   ##     ##  ##   ##  ##  ##      ## ##   ##      ##   ##   ##  ##   ##   **
+ **   ##  ## ##  ##   ##  ##  ##      ####     ###    ##   ######   ######    **
+ **    ##  ###   ##   ##  ##  ##      ## ##      ##   ##   ##       ##        **
+ **     #######   #####   ##   #####  ##  ##  ####    ##    #####   ##        **
+ **           ##                                                    ##        **
+ **                                                                           **
+ **                                                ... make the atoms dance   **
+ **                                                                           **
+ **            Copyright (C) by CP2K developers group (2000-2024)             **
+ **                      J. Chem. Phys. 152, 194103 (2020)                    **
+ **                                                                           **
+ *******************************************************************************
+
+
+ TOTAL NUMBERS AND MAXIMUM NUMBERS
+
+  Total number of            - Atomic kinds:                                   2
+                             - Atoms:                                        192
+                             - Shell sets:                                   192
+                             - Shells:                                       704
+                             - Primitive Cartesian functions:               1344
+                             - Cartesian basis functions:                   1536
+                             - Spherical basis functions:                   1472
+
+  Maximum angular momentum of- Orbital basis functions:                        2
+                             - Local part of the GTH pseudopotential:          2
+                             - Non-local part of the GTH pseudopotential:      0
+
+ ------------------------------ Linear scaling SCF -----------------------------
+ eps_scf:                                                              0.100E-07
+ eps_filter:                                                           0.100E-11
+ mixing_fraction:                                                      0.450E+00
+ max_scf:                                                                     25
+ fixed chemical potential (mu)                                                 F
+ has unit metric:                                                              F
+ Computing inv(S):                                                             T
+ Computing sqrt(S):                                                            T
+ Computing S preconditioner                                                    F
+ S sqrt method:                                                     NEWTONSCHULZ
+ S sqrt order:                                                                 3
+ Extrapolation order:                                                          1
+ S preconditioner type                                                      NONE
+ Polarized Atomic Orbitals (PAO)                                               F
+ Purification method                                   Trace resetting 4th order
+ Cluster type                                                             ATOMIC
+ Computing Chebyshev                                                       FALSE
+ Using PAO                                                                     F
+ -------------------------------------------------------------------------------
+
+
+     Lanczos converged:  F threshold:   0.100E-02
+     Est. extremal eigenvalues:    0.875E+01   0.625E-02
+     Est. condition number :    0.140E+04
+
+ Order=           3
+     NS sqrt iter    1 1.00000000   0.226E+01       0.064     6279.997
+     NS sqrt iter    2 1.00000000   0.118E+01       0.100     8006.723
+     NS sqrt iter    3 1.00000000   0.583E+00       0.099     8018.810
+     NS sqrt iter    4 1.00000000   0.336E+00       0.099     8091.023
+     NS sqrt iter    5 1.00000000   0.226E+00       0.099     8079.404
+     NS sqrt iter    6 1.00000000   0.106E+00       0.100     8011.750
+     NS sqrt iter    7 1.00000000   0.131E-01       0.100     8002.957
+     NS sqrt iter    8 1.00000000   0.580E-04       0.099     8014.584
+     NS sqrt iter    9 1.00000000   0.182E-10       0.054     5536.976
+     Symmetrizing Results
+     Final NS sqrt iter    9 1.00000000   0.716E-11
+
+
+
+ Guess for atomic kind: O
+
+ Electronic structure
+    Total number of core electrons                                          2.00
+    Total number of valence electrons                                       6.00
+    Total number of electrons                                               8.00
+    Multiplicity                                                   not specified
+    S   [  2.00] 2.00
+    P      4.00
+
+
+ *******************************************************************************
+                  Iteration          Convergence                     Energy [au]
+ *******************************************************************************
+                          1        0.708315                     -15.576645311500
+                          2        0.608879                     -15.587933561584
+                          3        0.102828E-01                 -15.656849565404
+                          4        0.113889E-02                 -15.656866888140
+                          5        0.434197E-03                 -15.656867072159
+                          6        0.263771E-03                 -15.656867091904
+                          7        0.478536E-06                 -15.656867103452
+
+ Energy components [Hartree]           Total Energy ::          -15.656867103452
+                                        Band Energy ::           -3.000198112285
+                                     Kinetic Energy ::           11.759971203220
+                                   Potential Energy ::          -27.416838306672
+                                      Virial (-V/T) ::            2.331369510426
+                                        Core Energy ::          -26.140716385623
+                                          XC Energy ::           -3.154051012914
+                                     Coulomb Energy ::           13.637900295084
+                       Total Pseudopotential Energy ::          -37.935781716540
+                       Local Pseudopotential Energy ::          -39.218907440693
+                    Nonlocal Pseudopotential Energy ::            1.283125724153
+                                        Confinement ::            0.350941276976
+
+ Orbital energies  State     L     Occupation   Energy[a.u.]          Energy[eV]
+
+                       1     0          2.000      -0.864471          -23.523463
+
+                       1     1          4.000      -0.317814           -8.648154
+
+
+ Total Electron Density at R=0:                                         0.000068
+
+ Guess for atomic kind: H
+
+ Electronic structure
+    Total number of core electrons                                          0.00
+    Total number of valence electrons                                       1.00
+    Total number of electrons                                               1.00
+    Multiplicity                                                   not specified
+    S      1.00
+
+
+ *******************************************************************************
+                  Iteration          Convergence                     Energy [au]
+ *******************************************************************************
+                          1        0.437545E-02                  -0.424159432110
+                          2        0.531356E-03                  -0.424178438213
+                          3        0.259176E-06                  -0.424178722480
+
+ Energy components [Hartree]           Total Energy ::           -0.424178722480
+                                        Band Energy ::           -0.199015229016
+                                     Kinetic Energy ::            0.464007633961
+                                   Potential Energy ::           -0.888186356441
+                                      Virial (-V/T) ::            1.914163240935
+                                        Core Energy ::           -0.479160803564
+                                          XC Energy ::           -0.244352904054
+                                     Coulomb Energy ::            0.299334985138
+                       Total Pseudopotential Energy ::           -0.962295316385
+                       Local Pseudopotential Energy ::           -0.962295316385
+                    Nonlocal Pseudopotential Energy ::            0.000000000000
+                                        Confinement ::            0.191268788606
+
+ Orbital energies  State     L     Occupation   Energy[a.u.]          Energy[eV]
+
+                       1     0          1.000      -0.199015           -5.415480
+
+
+ Total Electron Density at R=0:                                         0.242907
+ Re-scaling the density matrix to get the right number of electrons
+                  # Electrons              Trace(P)               Scaling factor
+                          512               512.001                        1.000
+ Energy with the initial guess:     -1095.845493935
+
+     Est. extremal eigenvalues     -0.94564     5.30375  converged:  F
+     TRS4 it   1 1.00000000   0.565E+02       0.018     5432.585   0.100E-11
+     TRS4 it   2 1.00000000   0.543E+02       0.019     5282.774   0.100E-11
+     TRS4 it   3 1.00000000   0.343E+02       0.036     5542.233   0.100E-11
+     TRS4 it   4 1.00000000   0.177E+02       0.036     5567.015   0.100E-11
+     TRS4 it   5 1.00000000   0.107E+02       0.036     5612.011   0.100E-11
+     TRS4 it   6 1.00000000   0.487E+01       0.036     5589.963   0.100E-11
+     TRS4 it   7 1.00000000   0.145E+01       0.036     5590.949   0.100E-11
+     TRS4 it   8 1.00000000   0.220E+00       0.036     5528.917   0.100E-11
+     TRS4 it   9 1.00000000   0.949E-02       0.036     5600.975   0.100E-11
+     TRS4 it  10 1.00000000   0.276E-04       0.036     5576.082   0.100E-11
+     TRS4 it  11 1.00000000   0.824E-10       0.036     5529.372   0.100E-11
+     Final TRS4 iteration   11 1.00000000   0.824E-10
+     Chemical potential (mu):      -0.10578
+
+ SCF     1     -1097.972716152     -1097.972716152    2.059158
+
+*********************************************************
+ Using MIXING_FRACTION=0.450 to mix KS matrix:  iscf=  2
+ KS_nw=0.450*KS + 0.550*KS_old
+*********************************************************
+     Est. extremal eigenvalues     -0.83750     5.40120  converged:  T
+     TRS4 it   1 1.00000000   0.557E+02       0.019     5378.955   0.100E-11
+     TRS4 it   2 1.00000000   0.546E+02       0.018     5485.066   0.100E-11
+     TRS4 it   3 1.00000000   0.356E+02       0.037     5460.265   0.100E-11
+     TRS4 it   4 1.00000000   0.185E+02       0.036     5549.524   0.100E-11
+     TRS4 it   5 1.00000000   0.119E+02       0.036     5573.583   0.100E-11
+     TRS4 it   6 1.00000000   0.626E+01       0.036     5538.112   0.100E-11
+     TRS4 it   7 1.00000000   0.252E+01       0.036     5582.205   0.100E-11
+     TRS4 it   8 1.00000000   0.702E+00       0.036     5593.076   0.100E-11
+     TRS4 it   9 1.00000000   0.105E+00       0.036     5605.294   0.100E-11
+     TRS4 it  10 1.00000000   0.559E-02       0.036     5558.471   0.100E-11
+     TRS4 it  11 1.00000000   0.938E-05       0.036     5533.108   0.100E-11
+     TRS4 it  12 1.00000000   0.233E-10       0.036     5618.434   0.100E-11
+     Final TRS4 iteration   12 1.00000000   0.233E-10
+     Chemical potential (mu):      -0.01721
+
+ SCF     2     -1102.977751216        -5.005035065    2.174397
+
+*********************************************************
+ Using MIXING_FRACTION=0.450 to mix KS matrix:  iscf=  3
+ KS_nw=0.450*KS + 0.550*KS_old
+*********************************************************
+     Est. extremal eigenvalues     -0.84161     5.39400  converged:  T
+     TRS4 it   1 1.00000000   0.558E+02       0.019     5355.277   0.100E-11
+     TRS4 it   2 1.00000000   0.545E+02       0.018     5424.847   0.100E-11
+     TRS4 it   3 1.00000000   0.354E+02       0.036     5553.072   0.100E-11
+     TRS4 it   4 1.00000000   0.183E+02       0.036     5511.187   0.100E-11
+     TRS4 it   5 1.00000000   0.117E+02       0.036     5609.339   0.100E-11
+     TRS4 it   6 1.00000000   0.598E+01       0.036     5549.013   0.100E-11
+     TRS4 it   7 1.00000000   0.231E+01       0.036     5571.647   0.100E-11
+     TRS4 it   8 1.00000000   0.597E+00       0.036     5577.512   0.100E-11
+     TRS4 it   9 1.00000000   0.769E-01       0.036     5532.013   0.100E-11
+     TRS4 it  10 1.00000000   0.286E-02       0.036     5581.247   0.100E-11
+     TRS4 it  11 1.00000000   0.220E-05       0.036     5516.347   0.100E-11
+     TRS4 it  12 1.00000000   0.186E-11       0.036     5566.532   0.100E-11
+     Final TRS4 iteration   12 1.00000000   0.186E-11
+     Chemical potential (mu):      -0.02627
+
+ SCF     3     -1103.138161711        -0.160410495    2.093265
+
+*********************************************************
+ Using MIXING_FRACTION=0.450 to mix KS matrix:  iscf=  4
+ KS_nw=0.450*KS + 0.550*KS_old
+*********************************************************
+     Est. extremal eigenvalues     -0.83911     5.39977  converged:  T
+     TRS4 it   1 1.00000000   0.558E+02       0.019     5332.217   0.100E-11
+     TRS4 it   2 1.00000000   0.545E+02       0.019     5336.407   0.100E-11
+     TRS4 it   3 1.00000000   0.355E+02       0.037     5494.003   0.100E-11
+     TRS4 it   4 1.00000000   0.184E+02       0.036     5574.966   0.100E-11
+     TRS4 it   5 1.00000000   0.118E+02       0.036     5580.652   0.100E-11
+     TRS4 it   6 1.00000000   0.610E+01       0.036     5638.930   0.100E-11
+     TRS4 it   7 1.00000000   0.239E+01       0.035     5662.326   0.100E-11
+     TRS4 it   8 1.00000000   0.640E+00       0.035     5681.915   0.100E-11
+     TRS4 it   9 1.00000000   0.887E-01       0.037     5492.709   0.100E-11
+     TRS4 it  10 1.00000000   0.396E-02       0.036     5613.325   0.100E-11
+     TRS4 it  11 1.00000000   0.515E-05       0.036     5554.064   0.100E-11
+     TRS4 it  12 1.00000000   0.115E-10       0.036     5507.692   0.100E-11
+     Final TRS4 iteration   12 1.00000000   0.115E-10
+     Chemical potential (mu):      -0.01985
+
+ SCF     4     -1103.146628054        -0.008466343    2.083131
+
+*********************************************************
+ Using MIXING_FRACTION=0.450 to mix KS matrix:  iscf=  5
+ KS_nw=0.450*KS + 0.550*KS_old
+*********************************************************
+     Est. extremal eigenvalues     -0.83674     5.40074  converged:  T
+     TRS4 it   1 1.00000000   0.558E+02       0.019     5312.932   0.100E-11
+     TRS4 it   2 1.00000000   0.545E+02       0.018     5445.389   0.100E-11
+     TRS4 it   3 1.00000000   0.355E+02       0.036     5516.488   0.100E-11
+     TRS4 it   4 1.00000000   0.184E+02       0.036     5599.670   0.100E-11
+     TRS4 it   5 1.00000000   0.118E+02       0.036     5518.580   0.100E-11
+     TRS4 it   6 1.00000000   0.607E+01       0.036     5508.565   0.100E-11
+     TRS4 it   7 1.00000000   0.238E+01       0.037     5495.450   0.100E-11
+     TRS4 it   8 1.00000000   0.635E+00       0.037     5495.410   0.100E-11
+     TRS4 it   9 1.00000000   0.877E-01       0.036     5568.645   0.100E-11
+     TRS4 it  10 1.00000000   0.387E-02       0.036     5560.917   0.100E-11
+     TRS4 it  11 1.00000000   0.498E-05       0.037     5425.243   0.100E-11
+     TRS4 it  12 1.00000000   0.122E-10       0.036     5538.150   0.100E-11
+     Final TRS4 iteration   12 1.00000000   0.122E-10
+     Chemical potential (mu):      -0.01906
+
+ SCF     5     -1103.147348176        -0.000720122    2.100215
+
+*********************************************************
+ Using MIXING_FRACTION=0.450 to mix KS matrix:  iscf=  6
+ KS_nw=0.450*KS + 0.550*KS_old
+*********************************************************
+     Est. extremal eigenvalues     -0.83637     5.40156  converged:  T
+     TRS4 it   1 1.00000000   0.558E+02       0.019     5322.514   0.100E-11
+     TRS4 it   2 1.00000000   0.545E+02       0.019     5176.499   0.100E-11
+     TRS4 it   3 1.00000000   0.355E+02       0.036     5571.610   0.100E-11
+     TRS4 it   4 1.00000000   0.184E+02       0.036     5531.267   0.100E-11
+     TRS4 it   5 1.00000000   0.118E+02       0.036     5587.133   0.100E-11
+     TRS4 it   6 1.00000000   0.609E+01       0.036     5509.954   0.100E-11
+     TRS4 it   7 1.00000000   0.239E+01       0.036     5605.878   0.100E-11
+     TRS4 it   8 1.00000000   0.640E+00       0.036     5599.223   0.100E-11
+     TRS4 it   9 1.00000000   0.892E-01       0.036     5539.379   0.100E-11
+     TRS4 it  10 1.00000000   0.403E-02       0.036     5519.998   0.100E-11
+     TRS4 it  11 1.00000000   0.558E-05       0.035     5658.972   0.100E-11
+     TRS4 it  12 1.00000000   0.155E-10       0.035     5669.231   0.100E-11
+     Final TRS4 iteration   12 1.00000000   0.155E-10
+     Chemical potential (mu):      -0.01805
+
+ SCF     6     -1103.147457516        -0.000109340    2.094184
+
+*********************************************************
+ Using MIXING_FRACTION=0.450 to mix KS matrix:  iscf=  7
+ KS_nw=0.450*KS + 0.550*KS_old
+*********************************************************
+     Est. extremal eigenvalues     -0.83572     5.40191  converged:  T
+     TRS4 it   1 1.00000000   0.558E+02       0.019     5280.869   0.100E-11
+     TRS4 it   2 1.00000000   0.545E+02       0.019     5387.555   0.100E-11
+     TRS4 it   3 1.00000000   0.355E+02       0.036     5644.681   0.100E-11
+     TRS4 it   4 1.00000000   0.184E+02       0.036     5557.949   0.100E-11
+     TRS4 it   5 1.00000000   0.118E+02       0.036     5640.200   0.100E-11
+     TRS4 it   6 1.00000000   0.608E+01       0.036     5606.090   0.100E-11
+     TRS4 it   7 1.00000000   0.239E+01       0.036     5625.288   0.100E-11
+     TRS4 it   8 1.00000000   0.640E+00       0.036     5499.679   0.100E-11
+     TRS4 it   9 1.00000000   0.893E-01       0.036     5617.062   0.100E-11
+     TRS4 it  10 1.00000000   0.404E-02       0.036     5554.536   0.100E-11
+     TRS4 it  11 1.00000000   0.566E-05       0.036     5551.560   0.100E-11
+     TRS4 it  12 1.00000000   0.164E-10       0.036     5599.234   0.100E-11
+     Final TRS4 iteration   12 1.00000000   0.164E-10
+     Chemical potential (mu):      -0.01768
+
+ SCF     7     -1103.147480163        -0.000022647    2.094401
+
+*********************************************************
+ Using MIXING_FRACTION=0.450 to mix KS matrix:  iscf=  8
+ KS_nw=0.450*KS + 0.550*KS_old
+*********************************************************
+     Est. extremal eigenvalues     -0.83558     5.40210  converged:  T
+     TRS4 it   1 1.00000000   0.558E+02       0.019     5392.119   0.100E-11
+     TRS4 it   2 1.00000000   0.545E+02       0.018     5564.929   0.100E-11
+     TRS4 it   3 1.00000000   0.355E+02       0.036     5537.073   0.100E-11
+     TRS4 it   4 1.00000000   0.184E+02       0.036     5542.549   0.100E-11
+     TRS4 it   5 1.00000000   0.118E+02       0.036     5630.060   0.100E-11
+     TRS4 it   6 1.00000000   0.609E+01       0.036     5631.178   0.100E-11
+     TRS4 it   7 1.00000000   0.239E+01       0.036     5590.469   0.100E-11
+     TRS4 it   8 1.00000000   0.641E+00       0.036     5555.808   0.100E-11
+     TRS4 it   9 1.00000000   0.896E-01       0.036     5579.464   0.100E-11
+     TRS4 it  10 1.00000000   0.407E-02       0.037     5492.414   0.100E-11
+     TRS4 it  11 1.00000000   0.578E-05       0.036     5550.269   0.100E-11
+     TRS4 it  12 1.00000000   0.171E-10       0.037     5485.820   0.100E-11
+     Final TRS4 iteration   12 1.00000000   0.171E-10
+     Chemical potential (mu):      -0.01744
+
+ SCF     8     -1103.147485482        -0.000005319    2.094698
+
+*********************************************************
+ Using MIXING_FRACTION=0.450 to mix KS matrix:  iscf=  9
+ KS_nw=0.450*KS + 0.550*KS_old
+*********************************************************
+     Est. extremal eigenvalues     -0.83541     5.40219  converged:  T
+     TRS4 it   1 1.00000000   0.558E+02       0.019     5390.262   0.100E-11
+     TRS4 it   2 1.00000000   0.545E+02       0.018     5492.246   0.100E-11
+     TRS4 it   3 1.00000000   0.355E+02       0.037     5477.617   0.100E-11
+     TRS4 it   4 1.00000000   0.184E+02       0.035     5710.964   0.100E-11
+     TRS4 it   5 1.00000000   0.118E+02       0.036     5566.993   0.100E-11
+     TRS4 it   6 1.00000000   0.609E+01       0.036     5532.431   0.100E-11
+     TRS4 it   7 1.00000000   0.239E+01       0.036     5542.939   0.100E-11
+     TRS4 it   8 1.00000000   0.641E+00       0.036     5643.130   0.100E-11
+     TRS4 it   9 1.00000000   0.897E-01       0.036     5562.237   0.100E-11
+     TRS4 it  10 1.00000000   0.408E-02       0.035     5661.775   0.100E-11
+     TRS4 it  11 1.00000000   0.581E-05       0.036     5581.818   0.100E-11
+     TRS4 it  12 1.00000000   0.173E-10       0.036     5540.306   0.100E-11
+     Final TRS4 iteration   12 1.00000000   0.173E-10
+     Chemical potential (mu):      -0.01734
+
+ SCF     9     -1103.147486807        -0.000001325    2.094867
+
+
+ SCF run converged in     9 steps.
+
+ Writing restart DM 64H2O_ref_LS_DM_SPIN_1_RESTART.dm with checksum:       0.61189941E+04
+
+ ENERGY| Total FORCE_EVAL ( QS ) energy [a.u.]:            -1103.147486806726647
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                                DBCSR STATISTICS                             -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+ COUNTER                                    TOTAL       BLAS       SMM       ACC
+ flops     5 x     5 x     5          86835324250       0.0%    100.0%      0.0%     
+ flops     5 x    13 x     5         112397467650       0.0%    100.0%      0.0%     
+ flops    13 x     5 x     5         112410308400       0.0%    100.0%      0.0%     
+ flops     5 x     5 x    13         112966498450       0.0%    100.0%      0.0%     
+ flops     5 x    13 x    13         146266074370       0.0%    100.0%      0.0%     
+ flops    13 x     5 x    13         146292634410       0.0%    100.0%      0.0%     
+ flops    13 x    13 x     5         147600488230       0.0%    100.0%      0.0%     
+ flops    13 x    13 x    13         192149360754       0.0%    100.0%      0.0%     
+ flops inhomo. stacks                           0       0.0%      0.0%      0.0%
+ flops total                         1.056918E+12       0.0%    100.0%      0.0%
+ flops max/rank                     33.949416E+09       0.0%    100.0%      0.0%
+ matmuls inhomo. stacks                         0       0.0%      0.0%      0.0%
+ matmuls total                         1171173197       0.0%    100.0%      0.0%
+ number of processed stacks               1663433       0.0%    100.0%      0.0%
+ average stack size                                     0.0     704.1       0.0
+ marketing flops                     1.735091E+12
+ -------------------------------------------------------------------------------
+ # multiplications                            272
+ max memory usage/rank             618.360832E+06
+ # max total images/rank                        2
+ # max 3D layers                                1
+ # MPI messages exchanged                  113152
+ MPI messages size (bytes):
+  total size                        46.778245E+09
+  min size                           0.000000E+00
+  max size                         541.696000E+03
+  average size                     413.410688E+03
+ MPI breakdown and total messages size (bytes):
+             size <=      128                 312                        0
+       128 < size <=     8192                  42                   279312
+      8192 < size <=    32768                  62                   841968
+     32768 < size <=   131072                 330                 36696672
+    131072 < size <=  4194304              112406              46740426688
+   4194304 < size <= 16777216                   0                        0
+  16777216 < size                               0                        0
+ -------------------------------------------------------------------------------
+
+ *** WARNING in dbcsr_mm.F:301 :: Using a non-square number of MPI ranks ***
+ *** might lead to poor performance. Used ranks: 32 Suggested: 36 64     ***
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                      DBCSR MESSAGE PASSING PERFORMANCE                      -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+ ROUTINE             CALLS      AVE VOLUME [Bytes]
+ MP_Bcast                9                     12.
+ MP_Allreduce         1951                     34.
+ MP_Alltoall           603                  34772.
+ MP_ISend             9528                 170402.
+ MP_IRecv             9116                 178709.
+ -------------------------------------------------------------------------------
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                                DBM STATISTICS                               -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+    M  x    N  x    K                                          COUNT     PERCENT
+ -------------------------------------------------------------------------------
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                                GRID STATISTICS                              -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+ LP    KERNEL             BACKEND                              COUNT     PERCENT
+ 2     collocate ortho    CPU                                8191940      28.82%
+ 2     integrate ortho    CPU                                8191940      28.82%
+ 3     collocate ortho    CPU                                5268170      18.53%
+ 3     integrate ortho    CPU                                5268170      18.53%
+ 4     collocate ortho    CPU                                 748860       2.63%
+ 4     integrate ortho    CPU                                 748860       2.63%
+ 0     collocate general  CPU                                   6144       0.02%
+ -------------------------------------------------------------------------------
+
+ MEMORY| Estimated peak process memory [MiB]                                 591
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                         MESSAGE PASSING PERFORMANCE                         -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+
+ ROUTINE             CALLS      AVE VOLUME [Bytes]
+ MP_Group                5
+ MP_Bcast             3032                 128926.
+ MP_Allreduce         8005                    939.
+ MP_Sync                 5
+ MP_Alltoall           269                4475614.
+ MP_SendRecv           930                  18832.
+ MP_ISendRecv          930                  18832.
+ MP_Wait              2652
+ MP_ISend             1558                 108479.
+ MP_IRecv             1558                 108501.
+ -------------------------------------------------------------------------------
+
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                           R E F E R E N C E S                               -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+ 
+ CP2K version 2024.3 (Development Version), the CP2K developers group (2024).
+ CP2K is freely available from https://www.cp2k.org/ .
+ 
+ T. D. Kuehne, M. Iannuzzi, M. Del Ben, V. V. Rybkin, P. Seewald, F. Stein, T. 
+ Laino, R. Z. Khaliullin, O. Schuett, F. Schiffmann, D. Golze, J. Wilhelm, S. 
+ Chulkov, M. H. Bani-Hashemian, V. Weber, U. Borstnik, M. Taillefumier, A. S. 
+ Jakobovits, A. Lazzaro, H. Pabst, T. Mueller, R. Schade, M. Guidon, S. 
+ Andermatt, N. Holmberg, G. K. Schenter, A. Hehn, A. Bussy, F. Belleflamme, G. 
+ Tabacchi, A. Gloess, M. Lass, I. Bethune, C. J. Mundy, C. Plessl, M. Watkins, 
+ J. VandeVondele, M. Krack, J. Hutter.
+ J. Chem. Phys. 152, 194103 (2020).
+ CP2K: An electronic structure and molecular dynamics software package - 
+ Quickstep: Efficient and accurate electronic structure calculations.
+ https://doi.org/10.1063/5.0007045
+
+ O. Schuett, P. Messmer, J. Hutter, J. VandeVondele.
+ Electronic Structure Calculations on Graphics Processing Units, 173-190 (2016).
+ GPU-Accelerated Sparse Matrix-Matrix Multiplication for Linear Scaling Density 
+ Functional Theory.
+ https://doi.org/10.1002/9781118670712.ch8
+
+ A. Heinecke, G. Henry, M. Hutchinson, H. Pabst.
+ Proceedings of Intl. Supercomputing Conference, 981-991 (2016).
+ LIBXSMM: Accelerating Small Matrix Multiplications by Runtime Code Generation.
+ https://doi.org/10.1109/SC.2016.83
+
+ J. Hutter, M. Iannuzzi, F. Schiffmann, J. VandeVondele.
+ WIREs Comput Mol Sci. 4, 15-25 (2014).
+ CP2K: atomistic simulations of condensed matter systems.
+ https://doi.org/10.1002/wcms.1159
+
+ U. Borstnik, J. VandeVondele, V. Weber, J. Hutter.
+ Parallel Comput. 40, 47-58 (2014).
+ Sparse matrix multiplication: The distributed block-compressed sparse row 
+ library.
+ https://doi.org/10.1016/j.parco.2014.03.012
+
+ A. Marek, V. Blum, R. Johanni, V. Havu, B. Lang, T. Auckenthaler, A. Heinecke, 
+ H. Bungartz, H. Lederer.
+ J. Phys. Condens. Matter 26, 213201 (2014).
+ The ELPA library: scalable parallel eigenvalue solutions for electronic 
+ structure theory and computational science.
+ https://doi.org/10.1088/0953-8984/26/21/213201
+
+ J. VandeVondele, U. Borstnik, J. Hutter.
+ J. Chem. Theory Comput. 8, 3565-3573 (2012).
+ Linear Scaling Self-Consistent Field Calculations with Millions of Atoms in the 
+ Condensed Phase.
+ https://doi.org/10.1021/ct200897x
+
+ J. VandeVondele, J. Hutter.
+ J. Chem. Phys. 127, 114105 (2007).
+ Gaussian basis sets for accurate calculations on molecular systems in gas and 
+ condensed phases.
+ https://doi.org/10.1063/1.2770708
+
+ J. VandeVondele, M. Krack, F. Mohamed, M. Parrinello, T. Chassaing, J. Hutter.
+ Comput. Phys. Commun. 167, 103-128 (2005).
+ QUICKSTEP: Fast and accurate density functional calculations using a mixed 
+ Gaussian and plane waves approach.
+ https://doi.org/10.1016/j.cpc.2004.12.014
+
+ M. Krack.
+ Theor. Chem. Acc. 114, 145-152 (2005).
+ Pseudopotentials for H to Kr optimized for gradient-corrected 
+ exchange-correlation functionals.
+ https://doi.org/10.1007/s00214-005-0655-y
+
+ M. Frigo, S. G. Johnson.
+ Proc. IEEE 93, 216-231 (2005).
+ The design and implementation of FFTW3.
+ https://doi.org/10.1109/JPROC.2004.840301
+
+ A. M. N. Niklasson, C. J. Tymczak, M. Challacombe.
+ J. Chem. Phys. 118, 8611-8620 (2003).
+ Trace resetting density matrix purification in O(N) self-consistent-field 
+ theory.
+ https://doi.org/10.1063/1.1559913
+
+ C. Hartwigsen, S. Goedecker, J. Hutter.
+ Phys. Rev. B 58, 3641-3662 (1998).
+ Relativistic separable dual-space Gaussian pseudopotentials from H to Rn.
+ https://doi.org/10.1103/PhysRevB.58.3641
+
+ G. Lippert, J. Hutter, M. Parrinello.
+ Mol. Phys. 92, 477-487 (1997).
+ A hybrid Gaussian and plane wave density functional scheme.
+ https://doi.org/10.1080/002689797170220
+
+ S. Goedecker, M. Teter, J. Hutter.
+ Phys. Rev. B 54, 1703-1710 (1996).
+ Separable dual-space Gaussian pseudopotentials.
+ https://doi.org/10.1103/PhysRevB.54.1703
+
+ J. P. Perdew, K. Burke, M. Ernzerhof.
+ Phys. Rev. Lett. 77, 3865-3868 (1996).
+ Generalized gradient approximation made simple.
+ https://doi.org/10.1103/PhysRevLett.77.3865
+
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                                T I M I N G                                  -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+ SUBROUTINE                       CALLS  ASD         SELF TIME        TOTAL TIME
+                                MAXIMUM       AVERAGE  MAXIMUM  AVERAGE  MAXIMUM
+ CP2K                                 1  1.0    0.013    0.017   22.684   22.684
+ qs_energies                          1  2.0    0.000    0.000   22.527   22.528
+ ls_scf                               1  3.0    0.000    0.000   21.431   21.432
+ ls_scf_main                          1  4.0    0.000    0.000   18.893   18.893
+ ls_scf_dm_to_ks                      9  5.0    0.000    0.000   14.024   14.032
+ qs_ks_update_qs_env                 10  6.1    0.000    0.000    8.778    8.782
+ rebuild_ks_matrix                   10  7.1    0.000    0.000    8.770    8.775
+ qs_ks_build_kohn_sham_matrix        10  8.1    0.002    0.002    8.770    8.775
+ qs_rho_update_rho_low               10  6.1    0.000    0.000    6.799    6.805
+ calculate_rho_elec                  10  7.1    0.003    0.004    6.799    6.805
+ sum_up_and_integrate                10  9.1    0.000    0.000    6.665    6.670
+ integrate_v_rspace                  10 10.1    0.000    0.000    6.656    6.661
+ grid_collocate_task_list            10  8.1    6.044    6.151    6.044    6.151
+ grid_integrate_task_list            10 11.1    5.781    5.947    5.781    5.947
+ dbcsr_multiply_generic             272  6.1    0.013    0.014    5.106    5.136
+ density_matrix_trs4                  9  5.0    0.004    0.006    4.863    4.891
+ multiply_cannon                    272  7.1    0.020    0.024    4.146    4.230
+ multiply_cannon_loop               272  8.1    0.021    0.023    4.063    4.096
+ ls_scf_init_scf                      1  4.0    0.000    0.000    2.475    2.476
+ multiply_cannon_multrec           2176  9.1    2.295    2.358    2.302    2.365
+ mp_waitall_1                     18502 10.5    1.914    2.012    1.914    2.012
+ fft_wrap_pw1pw2                    191 11.3    0.003    0.004    1.952    2.000
+ fft_wrap_pw1pw2_200                111 12.8    0.114    0.118    1.872    1.906
+ qs_vxc_create                       10  9.1    0.000    0.000    1.720    1.754
+ xc_vxc_pw_create                    10 10.1    0.015    0.021    1.720    1.753
+ multiply_cannon_metrocomm3        2176  9.1    0.006    0.007    1.499    1.595
+ fft3d_ps                           191 13.3    0.791    0.878    1.465    1.567
+ ls_scf_initial_guess                 1  5.0    0.000    0.000    1.557    1.558
+ ls_scf_qs_atomic_guess               1  6.0    0.000    0.000    1.557    1.558
+ xc_pw_derive                        60 12.1    0.001    0.001    1.220    1.308
+ qs_energies_init_hamiltonians        1  3.0    0.000    0.000    1.095    1.095
+ ls_scf_init_matrix_S                 1  5.0    0.000    0.000    0.918    0.919
+ build_core_hamiltonian_matrix        1  4.0    0.000    0.000    0.724    0.907
+ matrix_sqrt_Newton_Schulz            1  6.0    0.001    0.001    0.894    0.895
+ xc_rho_set_and_dset_create          10 11.1    0.022    0.029    0.866    0.892
+ xc_pw_divergence                    10 11.1    0.000    0.000    0.818    0.864
+ density_rs2pw                       10  8.1    0.000    0.001    0.718    0.821
+ make_m2s                           544  7.1    0.005    0.008    0.746    0.759
+ make_images                        544  8.1    0.043    0.044    0.735    0.748
+ mp_waitany                        1558 12.5    0.568    0.713    0.568    0.713
+ mp_alltoall_z22v                   191 15.3    0.480    0.708    0.480    0.708
+ potential_pw2rs                     10 11.1    0.001    0.001    0.663    0.665
+ build_core_ppl                       1  5.0    0.499    0.658    0.499    0.658
+ transfer_rs2pw                      51  9.0    0.001    0.001    0.497    0.637
+ arnoldi_extremal                    10  6.1    0.000    0.000    0.547    0.548
+ arnoldi_normal_ev                   10  7.1    0.000    0.001    0.546    0.547
+ transfer_rs2pw_200                  11  9.8    0.038    0.048    0.383    0.520
+ build_subspace                      48  8.1    0.004    0.004    0.484    0.484
+ yz_to_x                             71 14.2    0.065    0.085    0.313    0.472
+ -------------------------------------------------------------------------------
+
+ The number of warnings for this run is : 1
+ 
+ -------------------------------------------------------------------------------
+  **** **** ******  **  PROGRAM ENDED AT                 2024-09-23 17:38:08.427
+ ***** ** ***  *** **   PROGRAM RAN ON                                    moritz
+ **    ****   ******    PROGRAM RAN BY                                       ole
+ ***** **    ** ** **   PROGRAM PROCESS ID                                157031
+  **** **  *******  **  PROGRAM STOPPED IN /home/ole/git/pao_ml_equivar/64H2O_MD
+                                           /Frame2400

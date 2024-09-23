@@ -32,7 +32,8 @@ class PaoDataset(Dataset):
             # Build  k-d tree of atom positions.
             assert num_neighbors <= f.coords.shape[0]
             assert np.all(f.cell == np.diag(np.diagonal(f.cell)))
-            kdtree = scipy.spatial.KDTree(f.coords, boxsize=np.diagonal(f.cell))
+            boxsize = np.diagonal(f.cell)
+            kdtree = scipy.spatial.KDTree(np.mod(f.coords, boxsize), boxsize=boxsize)
             # alternative: https://wiki.fysik.dtu.dk/ase/ase/neighborlist.html
 
             for i, k in enumerate(f.atom2kind):

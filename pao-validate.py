@@ -4,6 +4,7 @@
 
 import torch
 import argparse
+import numpy as np
 from e3nn import o3
 from pathlib import Path
 from torch.utils.data import DataLoader
@@ -49,10 +50,15 @@ def main() -> None:
     assert dataset.kind.prim_basis_name == metadata["prim_basis_name"].decode("utf8")
 
     # TODO use dataloader for better performance.
+    losses = []
     for neighbors_relpos, neighbors_features, label in dataset:
         pred = model_script(neighbors_relpos, neighbors_features)
         loss = loss_function(pred, label)
-        print(f"loss: {loss:.8e}")
+        losses.append(loss.item())
+
+    print("minimum loss: {:.8e}".format(np.amin(losses)))
+    print("median  loss: {:.8e}".format(np.median(losses)))
+    print("maximum loss: {:.8e}".format(np.amax(losses)))
 
 
 # ======================================================================================
