@@ -19,10 +19,9 @@ class PaoDataset(Dataset):
 
         # Load kinds from the first training data file.
         kinds = parse_pao_file(files[0]).kinds
-        kind_names = np.array(sorted(kinds.keys()))
-        self.num_kinds = len(kinds)
         self.kind = kinds[kind_name]
         self.kind_name = kind_name
+        self.feature_kind_names = np.array(sorted(kinds.keys()))
 
         as_tensor = lambda x: torch.tensor(np.array(x, dtype=np.float32))
         # Load all training data files.
@@ -30,7 +29,7 @@ class PaoDataset(Dataset):
             f = parse_pao_file(fn)
 
             # Build  k-d tree of atom positions.
-            assert num_neighbors <= f.coords.shape[0]
+            assert 0 < num_neighbors < f.coords.shape[0]
             assert np.all(f.cell == np.diag(np.diagonal(f.cell)))
             boxsize = np.diagonal(f.cell)
             kdtree = scipy.spatial.KDTree(np.mod(f.coords, boxsize), boxsize=boxsize)
@@ -39,16 +38,18 @@ class PaoDataset(Dataset):
             for i, k in enumerate(f.atom2kind):
                 if k == kind_name:
                     # Find indicies of neighbor atoms.
-                    neighbors = kdtree.query(f.coords[i], num_neighbors)[1]
+                    nearest = kdtree.query(f.coords[i], num_neighbors + 1)[1]
+                    neighbors = [j for j in nearest if j != i]  # filter central atom
 
                     # Compute relative positions of neighbor atoms.
-                    neighbors_relpos = [f.coords[j] - f.coords[i] for j in neighbors]
+                    relpos = [f.coords[j] - f.coords[i] for j in neighbors]
 
                     # Features of neighbor atoms is the one-hot encoding of their kind.
-                    neighbors_kinds = np.array([f.atom2kind[j] for j in neighbors])
-                    neighbors_features = [k == kind_names for k in neighbors_kinds]
-                    self.neighbors_relpos.append(as_tensor(neighbors_relpos))
-                    self.neighbors_features.append(as_tensor(neighbors_features))
+                    features = [
+                        f.atom2kind[j] == self.feature_kind_names for j in neighbors
+                    ]
+                    self.neighbors_relpos.append(as_tensor(relpos))
+                    self.neighbors_features.append(as_tensor(features))
 
                     # Orthonormalize labels as it's required for the loss_functions.
                     label = np.linalg.svd(f.xblocks[i], full_matrices=False)[2]

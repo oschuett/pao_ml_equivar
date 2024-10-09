@@ -17,9 +17,9 @@ from pao.training import train_model
 # ======================================================================================
 def main() -> None:
     parser = argparse.ArgumentParser(description="Re-trains an exiting PAO-ML model.")
-    parser.add_argument("--steps", type=int, default=10000)
+    parser.add_argument("--epochs", type=int, default=5000)
     parser.add_argument("--batch", type=int, default=64)
-    parser.add_argument("--model", type=Path, default="trained_pao_model.pt")
+    parser.add_argument("--model", type=Path, required=True)
 
     # Training data files are passed as positional arguments.
     parser.add_argument("training_data", type=Path, nargs="+")
@@ -33,6 +33,7 @@ def main() -> None:
         "num_layers": "",
         "cutoff": "",
         "kind_name": "",
+        "feature_kind_names": "",
         "prim_basis_name": "",
         "pao_basis_size": "",
     }
@@ -52,9 +53,11 @@ def main() -> None:
     # Check compatability between model and training data.
     assert dataset.kind.pao_basis_size == int(metadata["pao_basis_size"].decode("utf8"))
     assert dataset.kind.prim_basis_name == metadata["prim_basis_name"].decode("utf8")
+    feature_kind_names_csv = ",".join(dataset.feature_kind_names)
+    assert feature_kind_names_csv == metadata["feature_kind_names"].decode("utf8")
 
     # Train the model.
-    train_model(model_script, dataloader, args.steps)
+    train_model(model_script, dataloader, args.epochs)
 
     # Save the model.
     model_script.save(args.model, _extra_files=metadata)

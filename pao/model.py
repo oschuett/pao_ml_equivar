@@ -3,7 +3,7 @@
 import torch
 import e3nn
 import warnings
-from typing import List
+from typing import Dict, List
 
 
 # ======================================================================================
@@ -12,7 +12,7 @@ class PaoModel(torch.nn.Module):
         self,
         prim_basis_irreps,
         pao_basis_size,
-        num_kinds,
+        num_feature_kinds,
         num_neighbors,
         num_distances,
         num_layers,
@@ -23,7 +23,7 @@ class PaoModel(torch.nn.Module):
         self.pao_basis_size = pao_basis_size
 
         # hyper-parameters
-        self.num_kinds = num_kinds
+        self.num_feature_kinds = num_feature_kinds
         self.num_neighbors = num_neighbors
         self.num_distances = num_distances
         self.num_layers = num_layers
@@ -33,7 +33,7 @@ class PaoModel(torch.nn.Module):
         self.matrix = SymmetricMatrix(self.prim_basis_irreps)
 
         # Irreps of input features, i.e. the descriptor.
-        self.features_irreps = num_kinds * e3nn.o3.Irrep("0e")
+        self.features_irreps = num_feature_kinds * e3nn.o3.Irrep("0e")
         self.features_irreps_dim = self.features_irreps.dim
 
         # Irreps of Spherical Harmonics used for sensing neighbors.
@@ -75,9 +75,10 @@ class PaoModel(torch.nn.Module):
         self.distance_buckets = torch.linspace(0.0, self.cutoff, self.num_distances)
 
     # ----------------------------------------------------------------------------------
-    def forward(
-        self, neighbors_relpos: torch.Tensor, neighbors_features: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        neighbors_relpos = inputs["neighbors_relpos"]
+        neighbors_features = inputs["neighbors_features"]
+
         assert neighbors_relpos.shape[-2] == self.num_neighbors
         assert neighbors_relpos.shape[-1] == 3
         assert neighbors_features.shape[-2] == self.num_neighbors
@@ -90,7 +91,6 @@ class PaoModel(torch.nn.Module):
         diff = (neighbors_distances[..., None] - self.distance_buckets) / bucket_width
         distance_embedding = diff.pow(2).neg().exp().div(1.12)
         weights = self.net(distance_embedding.mul(self.num_distances**0.5))
-
         sensors = self.spherical_harmonics(neighbors_relpos)
         vec_per_neighbor = self.tensor_product(
             x=neighbors_features.mul(self.num_neighbors**0.5), y=sensors, weight=weights
@@ -99,7 +99,8 @@ class PaoModel(torch.nn.Module):
         h_aux_matrix = self.matrix(h_aux_vec)
         u_matrix = torch.linalg.eigh(h_aux_matrix)[1]
         xblock = u_matrix[..., : self.pao_basis_size].transpose(-2, -1)
-        return xblock @ self.D_yzx_to_xyz
+        outputs = {"xblock": xblock @ self.D_yzx_to_xyz}
+        return outputs
 
 
 # ======================================================================================
@@ -143,7 +144,7 @@ class SymmetricMatrix(torch.nn.Module):
         assert vector.shape[-1] == sum(dim(l) for l in self.input_irreps_ls)
         basis_size = sum(dim(l) for l in self.basis_irreps_ls)
         matrix = torch.zeros(vector.shape[:-1] + (basis_size, basis_size))
-        matrix[..., :, :] = torch.eye(basis_size)
+        matrix[..., :, :] = torch.eye(basis_size)  # ensure matrix is diagonalizable
         c = 0  # position in vector
         z = 0  # position in self.wigner_blocks
         for i, li in enumerate(self.basis_irreps_ls):

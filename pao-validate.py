@@ -19,7 +19,7 @@ def main() -> None:
     description = "Validates a given equivariant PAO-ML model against test data."
     parser = argparse.ArgumentParser(description=description)
     # parser.add_argument("--batch", type=int, default=64)
-    parser.add_argument("--model", default="trained_pao_model.pt")
+    parser.add_argument("--model", required=True)
 
     # Test data files are passed as positional arguments.
     parser.add_argument("test_data", type=Path, nargs="+")
@@ -49,11 +49,15 @@ def main() -> None:
     assert dataset.kind.pao_basis_size == int(metadata["pao_basis_size"].decode("utf8"))
     assert dataset.kind.prim_basis_name == metadata["prim_basis_name"].decode("utf8")
 
-    # TODO use dataloader for better performance.
+    # Compute losses.
     losses = []
     for neighbors_relpos, neighbors_features, label in dataset:
-        pred = model_script(neighbors_relpos, neighbors_features)
-        loss = loss_function(pred, label)
+        inputs = {
+            "neighbors_relpos": neighbors_relpos,
+            "neighbors_features": neighbors_features,
+        }
+        outputs = model_script(inputs)
+        loss = loss_function(outputs["xblock"], label)
         losses.append(loss.item())
 
     print("minimum loss: {:.8e}".format(np.amin(losses)))

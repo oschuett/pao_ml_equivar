@@ -16,18 +16,23 @@ def loss_function(prediction, label):
 
 
 # ======================================================================================
-def train_model(model, dataloader: DataLoader, steps: int) -> None:
+def train_model(model, dataloader: DataLoader, epochs: int) -> None:
     # Train the model.
     optim = torch.optim.Adam(model.parameters())
-    for step in range(steps + 1):
+    for epoch in range(epochs + 1):
         optim.zero_grad()
         for neighbors_relpos, neighbors_features, label in dataloader:
-            pred = model(neighbors_relpos, neighbors_features)
-            loss = loss_function(pred, label)
+            inputs = {
+                "neighbors_relpos": neighbors_relpos,
+                "neighbors_features": neighbors_features,
+            }
+            outputs = model(inputs)
+            loss = loss_function(outputs["xblock"], label)
             loss.backward()
-        if step % 1000 == 0:
-            print(f"step: {step:5d} | loss: {loss:.8e}")
-        optim.step()
+            optim.step()
+        if epoch % 100 == 0:
+            print(f"epoch: {epoch:5d} | loss: {loss:.8e}")
+
     print(f"Training complete, final loss: {loss:.8e}")
 
 
