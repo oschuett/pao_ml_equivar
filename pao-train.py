@@ -4,7 +4,6 @@
 
 import torch
 import argparse
-from e3nn import o3
 from pathlib import Path
 from torch.utils.data import DataLoader
 
@@ -54,49 +53,31 @@ def main() -> None:
     dataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True)
     print(f"Found {len(dataset)} training samples of kind '{args.kind}'.")
 
-    # Irreps of primary basis.
-    assert dataset.kind.prim_basis_name == "DZVP-MOLOPT-GTH"  # TODO support more
-    prim_basis_specs = {
-        "O": "2x0e + 2x1o + 1x2e",  # two s-shells, two p-shells, one d-shell
-        "H": "2x0e + 1x1o",  # two s-shells, one p-shell
-    }
-
     # Construct the model.
-    model = PaoModel(
-        prim_basis_irreps=o3.Irreps(prim_basis_specs[args.kind]),
+    model_py = PaoModel(
+        kind_name=dataset.kind_name,
+        prim_basis_name=dataset.kind.prim_basis_name,
         pao_basis_size=dataset.kind.pao_basis_size,
-        num_feature_kinds=len(dataset.feature_kind_names),
+        feature_kind_names=dataset.feature_kind_names,
         num_neighbors=args.neighbors,
         num_distances=args.distances,
         num_layers=args.layers,
         cutoff=args.cutoff,
     )
+
+    # Compile the model to TorchScript.
+    model = torch.jit.script(model_py)
+
     num_model_params = sum(p.numel() for p in model.parameters())
     print(f"PAO-ML model will have {num_model_params} parameters.")
 
-    # Compile the model to TorchScript.
-    model_script = torch.jit.script(model)
-
     # Train the model.
-    train_model(model_script, dataloader, args.epochs)
+    train_model(model, dataloader, args.epochs)
 
     # Save the model.
-    metadata = {
-        "pao_model_version": "1",
-        "num_neighbors": str(args.neighbors),
-        "num_distances": str(args.neighbors),
-        "num_layers": str(args.layers),
-        "cutoff": str(args.cutoff),
-        "kind_name": args.kind,
-        "feature_kind_names": ",".join(dataset.feature_kind_names),
-        "prim_basis_name": dataset.kind.prim_basis_name,
-        "pao_basis_size": str(dataset.kind.pao_basis_size),
-    }
-    fn = (
-        args.model
-        or f"{dataset.kind.prim_basis_name}-PAO{dataset.kind.pao_basis_size}-{args.kind}.pt"
-    )
-    model_script.save(fn, _extra_files=metadata)
+    default_fn = f"{dataset.kind.prim_basis_name}-PAO{dataset.kind.pao_basis_size}-{args.kind}.pt"
+    fn = args.model or default_fn
+    model.save(fn)
     print(f"Saved model to file: {fn}")
 
 

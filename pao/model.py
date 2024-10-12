@@ -8,32 +8,55 @@ from typing import Dict, List
 
 # ======================================================================================
 class PaoModel(torch.nn.Module):
+    # Ensure these get picked up as attributes by TorchScript.
+    # https://pytorch.org/docs/stable/generated/torch.jit.Attribute.html
+    pao_model_version: int
+    kind_name: str
+    prim_basis_name: str
+    pao_basis_size: int
+    feature_kind_names: List[str]  # actually it's a numpy array of strings
+    num_neighbors: int
+    num_distances: int
+    num_layers: int
+    cutoff: float
+
     def __init__(
         self,
-        prim_basis_irreps,
+        kind_name,
+        prim_basis_name,
         pao_basis_size,
-        num_feature_kinds,
+        feature_kind_names,
         num_neighbors,
         num_distances,
         num_layers,
         cutoff,
     ):
         super().__init__()
-        self.prim_basis_irreps = prim_basis_irreps
+        self.pao_model_version = 1
+        self.kind_name = kind_name
+        self.prim_basis_name = prim_basis_name
         self.pao_basis_size = pao_basis_size
+        self.feature_kind_names = feature_kind_names
 
         # hyper-parameters
-        self.num_feature_kinds = num_feature_kinds
         self.num_neighbors = num_neighbors
         self.num_distances = num_distances
         self.num_layers = num_layers
         self.cutoff = cutoff
 
+        # Irreps of primary basis
+        assert prim_basis_name == "DZVP-MOLOPT-GTH"  # TODO support more basis sets
+        prim_basis_specs = {
+            "O": "2x0e + 2x1o + 1x2e",  # two s-shells, two p-shells, one d-shell
+            "H": "2x0e + 1x1o",  # two s-shells, one p-shell
+        }
+        prim_basis_irreps = e3nn.o3.Irreps(prim_basis_specs[kind_name])
+
         # auxiliary Hamiltonian
-        self.matrix = SymmetricMatrix(self.prim_basis_irreps)
+        self.matrix = SymmetricMatrix(prim_basis_irreps)
 
         # Irreps of input features, i.e. the descriptor.
-        self.features_irreps = num_feature_kinds * e3nn.o3.Irrep("0e")
+        self.features_irreps = len(self.feature_kind_names) * e3nn.o3.Irrep("0e")
         self.features_irreps_dim = self.features_irreps.dim
 
         # Irreps of Spherical Harmonics used for sensing neighbors.
@@ -62,7 +85,7 @@ class PaoModel(torch.nn.Module):
         # CP2K uses the yzx convention, while e3nn uses xyz.
         # https://docs.e3nn.org/en/stable/guide/change_of_basis.html
         yzx_to_xyz = torch.tensor([[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
-        self.D_yzx_to_xyz = self.prim_basis_irreps.D_from_matrix(yzx_to_xyz)
+        self.D_yzx_to_xyz = prim_basis_irreps.D_from_matrix(yzx_to_xyz)
 
         # Spherical Harmonics
         self.spherical_harmonics = e3nn.o3.SphericalHarmonics(

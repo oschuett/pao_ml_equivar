@@ -26,41 +26,29 @@ def main() -> None:
     args = parser.parse_args()
 
     # Load existing model and ignore most cmd arguments.
-    metadata = {
-        "pao_model_version": "",
-        "num_neighbors": "",
-        "num_distances": "",
-        "num_layers": "",
-        "cutoff": "",
-        "kind_name": "",
-        "feature_kind_names": "",
-        "prim_basis_name": "",
-        "pao_basis_size": "",
-    }
-    model_script = torch.jit.load(args.model, _extra_files=metadata)
-    assert int(metadata["pao_model_version"].decode("utf8")) >= 1
+    model = torch.jit.load(args.model)
+    assert model.pao_model_version >= 1
     print(f"Loaded pre-trained model from file: {args.model}")
 
     # Load the training data.
-    kind_name = metadata["kind_name"].decode("utf8")
-    num_neighbors = int(metadata["num_neighbors"].decode("utf8"))
     dataset = PaoDataset(
-        kind_name=kind_name, num_neighbors=num_neighbors, files=args.training_data
+        kind_name=model.kind_name,
+        num_neighbors=model.num_neighbors,
+        files=args.training_data,
     )
     dataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True)
-    print(f"Found {len(dataset)} training samples of kind '{kind_name}'.")
+    print(f"Found {len(dataset)} training samples of kind '{model.kind_name}'.")
 
     # Check compatability between model and training data.
-    assert dataset.kind.pao_basis_size == int(metadata["pao_basis_size"].decode("utf8"))
-    assert dataset.kind.prim_basis_name == metadata["prim_basis_name"].decode("utf8")
-    feature_kind_names_csv = ",".join(dataset.feature_kind_names)
-    assert feature_kind_names_csv == metadata["feature_kind_names"].decode("utf8")
+    assert dataset.kind.pao_basis_size == model.pao_basis_size
+    assert dataset.kind.prim_basis_name == model.prim_basis_name
+    assert all(dataset.feature_kind_names == model.feature_kind_names)
 
     # Train the model.
-    train_model(model_script, dataloader, args.epochs)
+    train_model(model, dataloader, args.epochs)
 
     # Save the model.
-    model_script.save(args.model, _extra_files=metadata)
+    model.save(args.model)
     print(f"Saved model to file: {args.model}")
 
 

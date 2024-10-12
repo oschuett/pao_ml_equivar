@@ -26,28 +26,22 @@ def main() -> None:
     args = parser.parse_args()
 
     # Load model.
-    metadata = {
-        "pao_model_version": "",
-        "num_neighbors": "",
-        "kind_name": "",
-        "prim_basis_name": "",
-        "pao_basis_size": "",
-    }
-    model_script = torch.jit.load(args.model, _extra_files=metadata)
-    assert int(metadata["pao_model_version"].decode("utf8")) >= 1
+    model = torch.jit.load(args.model)
+    assert model.pao_model_version >= 1
     print(f"Loaded model from file: {args.model}")
 
     # Load the test data.
-    kind_name = metadata["kind_name"].decode("utf8")
-    num_neighbors = int(metadata["num_neighbors"].decode("utf8"))
     dataset = PaoDataset(
-        kind_name=kind_name, num_neighbors=num_neighbors, files=args.test_data
+        kind_name=model.kind_name,
+        num_neighbors=model.num_neighbors,
+        files=args.test_data,
     )
-    print(f"Found {len(dataset)} test samples of kind '{kind_name}'.")
+    print(f"Found {len(dataset)} test samples of kind '{model.kind_name}'.")
 
     # Check compatability between model and test data.
-    assert dataset.kind.pao_basis_size == int(metadata["pao_basis_size"].decode("utf8"))
-    assert dataset.kind.prim_basis_name == metadata["prim_basis_name"].decode("utf8")
+    assert dataset.kind.pao_basis_size == model.pao_basis_size
+    assert dataset.kind.prim_basis_name == model.prim_basis_name
+    assert all(dataset.feature_kind_names == model.feature_kind_names)
 
     # Compute losses.
     losses = []
@@ -56,7 +50,7 @@ def main() -> None:
             "neighbors_relpos": neighbors_relpos,
             "neighbors_features": neighbors_features,
         }
-        outputs = model_script(inputs)
+        outputs = model(inputs)
         loss = loss_function(outputs["xblock"], label)
         losses.append(loss.item())
 
