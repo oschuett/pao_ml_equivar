@@ -39,8 +39,10 @@ def main() -> None:
     print(f"Found {len(dataset)} test samples of kind '{model.kind_name}'.")
 
     # Check compatability between model and test data.
+    assert dataset.kind.atomic_number == model.atomic_number
     assert dataset.kind.pao_basis_size == model.pao_basis_size
     assert dataset.kind.prim_basis_name == model.prim_basis_name
+    assert dataset.kind.prim_basis_size == model.prim_basis_size
     assert all(dataset.feature_kind_names == model.feature_kind_names)
 
     # Compute losses.

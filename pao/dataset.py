@@ -20,7 +20,6 @@ class PaoDataset(Dataset):
         # Load kinds from the first training data file.
         kinds = parse_pao_file(files[0]).kinds
         self.kind = kinds[kind_name]
-        self.kind_name = kind_name
         self.feature_kind_names = np.array(sorted(kinds.keys()))
 
         as_tensor = lambda x: torch.tensor(np.array(x, dtype=np.float32))

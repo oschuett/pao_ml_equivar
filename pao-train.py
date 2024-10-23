@@ -55,8 +55,10 @@ def main() -> None:
 
     # Construct the model.
     model_py = PaoModel(
-        kind_name=dataset.kind_name,
+        kind_name=dataset.kind.name,
+        atomic_number=dataset.kind.atomic_number,
         prim_basis_name=dataset.kind.prim_basis_name,
+        prim_basis_size=dataset.kind.prim_basis_size,
         pao_basis_size=dataset.kind.pao_basis_size,
         feature_kind_names=dataset.feature_kind_names,
         num_neighbors=args.neighbors,

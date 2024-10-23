@@ -12,7 +12,9 @@ class PaoModel(torch.nn.Module):
     # https://pytorch.org/docs/stable/generated/torch.jit.Attribute.html
     pao_model_version: int
     kind_name: str
+    atomic_number: int
     prim_basis_name: str
+    prim_basis_size: int
     pao_basis_size: int
     feature_kind_names: List[str]  # actually it's a numpy array of strings
     num_neighbors: int
@@ -23,7 +25,9 @@ class PaoModel(torch.nn.Module):
     def __init__(
         self,
         kind_name,
+        atomic_number,
         prim_basis_name,
+        prim_basis_size,
         pao_basis_size,
         feature_kind_names,
         num_neighbors,
@@ -34,7 +38,9 @@ class PaoModel(torch.nn.Module):
         super().__init__()
         self.pao_model_version = 1
         self.kind_name = kind_name
+        self.atomic_number = atomic_number
         self.prim_basis_name = prim_basis_name
+        self.prim_basis_size = prim_basis_size
         self.pao_basis_size = pao_basis_size
         self.feature_kind_names = feature_kind_names
 
@@ -51,6 +57,7 @@ class PaoModel(torch.nn.Module):
             "H": "2x0e + 1x1o",  # two s-shells, one p-shell
         }
         prim_basis_irreps = e3nn.o3.Irreps(prim_basis_specs[kind_name])
+        assert self.prim_basis_size == prim_basis_irreps.dim
 
         # auxiliary Hamiltonian
         self.matrix = SymmetricMatrix(prim_basis_irreps)

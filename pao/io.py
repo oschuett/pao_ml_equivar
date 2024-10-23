@@ -14,6 +14,7 @@ NDArray = npt.NDArray[np.float64]
 # ======================================================================================
 @dataclass
 class AtomicKind:
+    name: str
     atomic_number: int
     nparams: int = -1
     prim_basis_size: int = -1
@@ -49,8 +50,9 @@ def parse_pao_file(path: Path) -> PaoFile:
 
         elif parts[0] == "Kind":
             ikind = int(parts[1])
-            ikind2name[ikind] = parts[2]
-            kinds[ikind2name[ikind]] = AtomicKind(atomic_number=int(parts[3]))
+            kind = AtomicKind(name=parts[2], atomic_number=int(parts[3]))
+            kinds[kind.name] = kind
+            ikind2name[ikind] = kind.name
 
         elif parts[0] == "NParams":
             ikind = int(parts[1])
