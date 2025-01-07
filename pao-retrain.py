@@ -5,7 +5,7 @@
 import argparse
 import torch
 
-from e3nn import o3
+from e3nn import o3  # type: ignore
 from pathlib import Path
 from torch.utils.data import DataLoader
 
@@ -26,7 +26,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # Load existing model and ignore most cmd arguments.
-    model = torch.jit.load(args.model)
+    model = torch.jit.load(args.model)  # type: ignore
     assert model.pao_model_version >= 1
     print(f"Loaded pre-trained model from file: {args.model}")
 

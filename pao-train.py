@@ -8,24 +8,8 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 
 from pao.model import PaoModel
-from pao.dataset import PaoDataset
+from pao.dataset import PaoDataset, PaoRecord
 from pao.training import train_model
-
-
-# ======================================================================================
-def train(model, dataloader, steps) -> None:
-    # Train the model.
-    optim = torch.optim.Adam(model.parameters())
-    for step in range(steps + 1):
-        optim.zero_grad()
-        for neighbors_relpos, neighbors_features, label in dataloader:
-            pred = model(neighbors_relpos, neighbors_features)
-            loss = pao_loss_function(pred, label)
-            loss.backward()
-        if step % 1000 == 0:
-            print(f"step: {step:5d} | loss: {loss:.8e}")
-        optim.step()
-    print(f"Training complete, final loss: {loss:.8e}")
 
 
 # ======================================================================================

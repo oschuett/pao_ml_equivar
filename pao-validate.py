@@ -5,7 +5,7 @@
 import torch
 import argparse
 import numpy as np
-from e3nn import o3
+from e3nn import o3  # type: ignore
 from pathlib import Path
 from torch.utils.data import DataLoader
 
@@ -26,7 +26,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # Load model.
-    model = torch.jit.load(args.model)
+    model = torch.jit.load(args.model)  # type: ignore
     assert model.pao_model_version >= 1
     print(f"Loaded model from file: {args.model}")
 
@@ -56,9 +56,9 @@ def main() -> None:
         loss = loss_function(outputs["xblock"], label)
         losses.append(loss.item())
 
-    print("minimum loss: {:.8e}".format(np.amin(losses)))
-    print("median  loss: {:.8e}".format(np.median(losses)))
-    print("maximum loss: {:.8e}".format(np.amax(losses)))
+    print("minimum loss: {:.8e}".format(np.amin(losses).item()))
+    print("median  loss: {:.8e}".format(np.median(losses).item()))
+    print("maximum loss: {:.8e}".format(np.amax(losses).item()))
 
 
 # ======================================================================================

@@ -1,9 +1,9 @@
 # author: Ole Schuett
 
 import torch
-import e3nn
+import e3nn  # type: ignore
 import warnings
-from typing import Dict, List
+from typing import Any, Dict, List
 
 
 # ======================================================================================
@@ -16,7 +16,7 @@ class PaoModel(torch.nn.Module):
     prim_basis_name: str
     prim_basis_size: int
     pao_basis_size: int
-    feature_kind_names: List[str]  # actually it's a numpy array of strings
+    feature_kind_names: List[str]
     num_neighbors: int
     num_distances: int
     num_layers: int
@@ -24,16 +24,16 @@ class PaoModel(torch.nn.Module):
 
     def __init__(
         self,
-        kind_name,
-        atomic_number,
-        prim_basis_name,
-        prim_basis_size,
-        pao_basis_size,
-        feature_kind_names,
-        num_neighbors,
-        num_distances,
-        num_layers,
-        cutoff,
+        kind_name: str,
+        atomic_number: int,
+        prim_basis_name: str,
+        prim_basis_size: int,
+        pao_basis_size: int,
+        feature_kind_names: List[str],
+        num_neighbors: int,
+        num_distances: int,
+        num_layers: int,
+        cutoff: float,
     ):
         super().__init__()
         self.pao_model_version = 1
@@ -123,7 +123,9 @@ class PaoModel(torch.nn.Module):
         weights = self.net(distance_embedding.mul(self.num_distances**0.5))
         sensors = self.spherical_harmonics(neighbors_relpos)
         vec_per_neighbor = self.tensor_product(
-            x=neighbors_features.mul(self.num_neighbors**0.5), y=sensors, weight=weights
+            x=neighbors_features.mul(self.num_neighbors**0.5),
+            y=sensors,
+            weight=weights,
         )
         h_aux_vec = vec_per_neighbor.sum(dim=-2).div(self.num_neighbors**0.5)
         h_aux_matrix = self.matrix(h_aux_vec)
@@ -149,7 +151,7 @@ def dim(l: int) -> int:
 
 # ======================================================================================
 class SymmetricMatrix(torch.nn.Module):
-    def __init__(self, basis_irreps):
+    def __init__(self, basis_irreps: Any):
         super().__init__()
         self.basis_irreps = basis_irreps
         self.basis_irreps_ls: List[int] = basis_irreps.ls

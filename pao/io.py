@@ -39,9 +39,9 @@ def parse_pao_file(path: Path) -> PaoFile:
     ikind2name = {}  # maps kind index to kind name
     atom2kind: List[KindName] = []  # maps atom index to kind name
     kinds: Dict[KindName, AtomicKind] = {}
-    cell = []
-    coords_list = []
-    xblocks = []
+    cell: NDArray = np.zeros((3, 3))
+    coords_list: List[List[str]] = []
+    xblocks: List[NDArray] = []
 
     for line in path.read_text().strip().split("\n"):
         parts = line.split()
@@ -97,7 +97,6 @@ def write_pao_file(
     coords: NDArray,
     xblocks: List[NDArray],
 ) -> None:
-
     natoms = coords.shape[0]
     assert coords.shape[1] == 3
     assert len(xblocks) == natoms
